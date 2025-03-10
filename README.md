@@ -12,7 +12,7 @@ La aplicación permite que:
 - Se gestionan **Pagos** a través de una pasarela integrada; la ruta fija el costo y se cobra a cada pasajero.
 - Se envían **Notificaciones** tanto por eventos en las paradas (por cercanía o incidentes) como por acciones en la mensajería.
 
-  ## Tecnologías y Herramientas
+## Tecnologías y Herramientas
 
 - **Desarrollo Android:**  
   Actualmente, el proyecto se está desarrollando en Android Studio, enfocándose en la creación de la aplicación móvil para dispositivos Android.
