@@ -22,9 +22,9 @@ La aplicación permite que:
   Las herramientas para el desarrollo del backend, la base de datos, la integración de pasarelas de pago y el sistema de notificaciones se definirán en etapas futuras, conforme se vayan estableciendo los requerimientos y la arquitectura completa del sistema.
 
 ## Equipo de Trabajo
-- **Samuel Osorio**
+- **Samuel Osorio:**
   Soy estudiante de quinto semestre de Ingeniería de Sistemas y tengo 19 años. Me apasiona el desarrollo de software y la gestión de bases de datos, áreas en las que me he formado a través de conocimientos en C++, Java y diversas tecnologías de bases de datos. Además, disfruto mucho de los videojuegos y soy un entusiasta del fútbol, lo que refleja mi espíritu competitivo y mi capacidad para trabajar en equipo. Esta combinación de intereses y habilidades me impulsa a contribuir con creatividad y compromiso en cada proyecto, buscando siempre aprender y crecer en el campo del desarrollo tecnológico.
 
-- **Daniel Alfredo Vidal de León**
+- **Daniel Alfredo Vidal de León:**
   Soy estudiante de Ingeniería de Sistemas, tengo 24 años. Poseo habilidades sólidas en los lenguajes de programación Java, C++ y Python, y disfruto trabajando en equipo; me gusta la tecnología y los videojuegos y su desarrollo.
 
