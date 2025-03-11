@@ -28,3 +28,12 @@ La aplicación permite que:
 - **Daniel Alfredo Vidal de León:**
   Soy estudiante de Ingeniería de Sistemas, tengo 24 años. Poseo habilidades sólidas en los lenguajes de programación Java, C++ y Python, y disfruto trabajando en equipo; me gusta la tecnología y los videojuegos y su desarrollo.
 
+- **Sergio David Ortiz:**
+  Soy Sergio David Ortiz, estudiante de quinto semestre de Ingeniería de Sistemas en la Pontificia Universidad Javeriana, apasionado por la programación y los videojuegos. Utilizo mis conocimientos de programación en C++ y Java para crear soluciones eficientes y abordar problemas complejos. Paso mi tiempo libre socializando con amigos y familiares y jugando videojuegos de todo tipo, incluidos MOBA y shooters.
+
+- **Julian Ramos:**
+  Soy Julián Ramos, tengo 19 años y soy estudiante de quinto semestre de Ingeniería de Sistemas en la Pontifícia Universidad Javeriana. Apasionado por el mundo de la programación, tengo experiencia y conocimientos en lenguajes como C++, Java, HTML, CSS, Spring Boot y gestión de bases de datos. En mi tiempo libre, disfruto del gimnasio, pasar tiempo con mi familia y amigos.
+
+- **Tomas Felipe Guerra:**
+  Mi nombre es Tomas Felipe Guerra de 21 años, y soy estudiante de Ingenieria de Sistemas. Tengo conocimiento en los lenguajes de programacion de Java, C++, SQL, html, css, javascript. Busco el poder programar de manera correcta en equipo. Mis pasatiempos son los videojuegos y series.
+
