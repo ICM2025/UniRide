@@ -13,14 +13,34 @@
         android:theme="@style/Theme.UniRide"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".PassengerHomeActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".DriverManageTripsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PassengerSettingsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PassengerProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverHomeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".BottomMenuActivity"
+            android:exported="false" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
