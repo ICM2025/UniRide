@@ -1,22 +1,17 @@
 package com.example.uniride
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class PassengerSettingsActivity : BottomMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val contentView = layoutInflater.inflate(R.layout.activity_passenger_settings, binding.container
+        val contentView = layoutInflater.inflate(R.layout.activity_passenger_settings, bottomMenuBinding.container
             , false)
-        binding.container.removeAllViews()
-        binding.container.addView(contentView)
+        bottomMenuBinding.container.removeAllViews()
+        bottomMenuBinding.container.addView(contentView)
 
-        binding.bottomNav.selectedItemId = R.id.nav_settings
+        bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_settings
 
     }
 }

@@ -3,21 +3,18 @@ package com.example.uniride
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.example.uniride.databinding.ActivityBottomMenuBinding
 
 open class BottomMenuActivity : AppCompatActivity() {
 
-    protected lateinit var binding: ActivityBottomMenuBinding
+    protected lateinit var bottomMenuBinding: ActivityBottomMenuBinding
     protected var isPassengerMode = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityBottomMenuBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        bottomMenuBinding = ActivityBottomMenuBinding.inflate(layoutInflater)
+        setContentView(bottomMenuBinding.root)
 
         loadCurrentMode()
 
@@ -26,7 +23,7 @@ open class BottomMenuActivity : AppCompatActivity() {
     }
 
     protected fun setupBottomNavigation() {
-        binding.bottomNav.setOnItemSelectedListener {
+        bottomMenuBinding.bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
                 R.id.nav_home -> {
                     if (this !is PassengerHomeActivity && isPassengerMode) {
@@ -99,13 +96,13 @@ open class BottomMenuActivity : AppCompatActivity() {
     }
 
     protected fun loadPassengerMenu() {
-        binding.bottomNav.menu.clear()
-        binding.bottomNav.inflateMenu(R.menu.bottom_nav_passenger)
+        bottomMenuBinding.bottomNav.menu.clear()
+        bottomMenuBinding.bottomNav.inflateMenu(R.menu.bottom_nav_passenger)
     }
 
     protected fun loadDriverMenu() {
-        binding.bottomNav.menu.clear()
-        binding.bottomNav.inflateMenu(R.menu.bottom_nav_driver)
+        bottomMenuBinding.bottomNav.menu.clear()
+        bottomMenuBinding.bottomNav.inflateMenu(R.menu.bottom_nav_driver)
     }
 
     protected fun loadCurrentMode() {
