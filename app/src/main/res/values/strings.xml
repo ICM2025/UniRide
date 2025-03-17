@@ -7,4 +7,7 @@
     <string name="institutional_email">Correo institucional</string>
     <string name="password">Contraseña</string>
     <string name="forgotAccount"><u><i>¿Olvido su correo o contraseña?</i></u></string>
+    <string name="user">Usuario</string>
+    <string name="create_account">Crear cuenta</string>
+    <string name="register2">Registrar</string>
 </resources>
