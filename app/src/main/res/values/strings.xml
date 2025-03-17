@@ -3,4 +3,8 @@
     <string name="text_init">Ingresar</string>
     <string name="no_account">¿No tienes cuenta?</string>
     <string name="register"><u>Registrate</u></string>
+    <string name="welcome">Bienvenido a UniRide</string>
+    <string name="institutional_email">Correo institucional</string>
+    <string name="password">Contraseña</string>
+    <string name="forgotAccount"><u><i>¿Olvido su correo o contraseña?</i></u></string>
 </resources>
