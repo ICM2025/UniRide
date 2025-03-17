@@ -10,4 +10,11 @@
     <string name="user">Usuario</string>
     <string name="create_account">Crear cuenta</string>
     <string name="register2">Registrar</string>
+    <string name="recover_password">Recuperar contraseña</string>
+    <string name="recover_text">Por favor ingrese su correo de recuperación</string>
+    <string name="send_code">Enviar código</string>
+    <string name="code">Código</string>
+    <string name="recover">Recuperar</string>
+    <string name="new_password_text">Por favor ingrese su nueva contraseña</string>
+    <string name="password_confirm">Confirmar contraseña</string>
 </resources>
