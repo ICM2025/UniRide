@@ -17,4 +17,5 @@
     <string name="recover">Recuperar</string>
     <string name="new_password_text">Por favor ingrese su nueva contraseña</string>
     <string name="password_confirm">Confirmar contraseña</string>
+    <string name="continu">Continuar</string>
 </resources>
