@@ -18,7 +18,7 @@ class RegisterActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java))
         }
         binding.createAccountButton.setOnClickListener{
-            startActivity(Intent(this, BottomMenuActivity::class.java))
+            startActivity(Intent(this, PassengerHomeActivity::class.java))
         }
     }
 }
