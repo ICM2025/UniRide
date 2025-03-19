@@ -84,8 +84,6 @@
         <activity
             android:name=".SearchWheelActivity"
             android:exported="false" />
-    </application
-
         <!-- Pantalla de "Acerca de" -->
         <activity
             android:name=".AcercaDeActivity"
