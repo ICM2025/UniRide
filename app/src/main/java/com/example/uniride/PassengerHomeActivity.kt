@@ -33,13 +33,6 @@ class PassengerHomeActivity : BottomMenuActivity() {
     private fun navigateToSearchWheelActivity() {
         val intent = Intent(baseContext, SearchWheelActivity::class.java)
         startActivity(intent)
-        binding.btnRouteInProgressPassenger.setOnClickListener {
-            val intent = Intent(this, PassengerRouteInProgressActivity::class.java).apply {
-                putExtra("ESTIMATED_TIME", 25) // Tiempo estimado inicial
-                putExtra("DISTANCE", 3) // Distancia inicial
-            }
-            startActivity(intent)
-        }
     }
 
     private fun loadImage() {
