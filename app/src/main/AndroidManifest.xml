@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -14,6 +16,15 @@
         tools:targetApi="31">
 
         <!-- Actividades existentes -->
+        <activity
+            android:name=".MessageActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PassengerRouteInProgressActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverRouteInProgressActivity"
+            android:exported="false" />
         <activity
             android:name=".NewPasswordActivity"
             android:exported="false" />
@@ -58,8 +69,22 @@
         <activity
             android:name=".MainActivity"
             android:exported="false" />
-
-        <!-- NUEVAS ACTIVIDADES -->
+        <activity
+            android:name=".DriverPassengersListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverRateActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverAviableActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SearchWheelActivity"
+            android:exported="false" />
+    </application
 
         <!-- Pantalla de "Acerca de" -->
         <activity

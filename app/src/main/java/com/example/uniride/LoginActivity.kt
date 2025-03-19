@@ -18,7 +18,7 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
         binding.ingresarButton.setOnClickListener{
-            startActivity(Intent(this, BottomMenuActivity::class.java))
+            startActivity(Intent(this, PassengerHomeActivity::class.java))
         }
         binding.olvidoText.setOnClickListener{
             startActivity(Intent(this, RecoverPasswordActivity::class.java))
