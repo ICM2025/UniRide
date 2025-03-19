@@ -15,16 +15,13 @@
         android:theme="@style/Theme.UniRide"
         tools:targetApi="31">
         <activity
-            android:name=".DriverRateActivity"
+            android:name=".MessageActivity"
             android:exported="false" />
         <activity
-            android:name=".DriverDetailsActivity"
+            android:name=".PassengerRouteInProgressActivity"
             android:exported="false" />
         <activity
-            android:name=".DriverAviableActivity"
-            android:exported="false" />
-        <activity
-            android:name=".SearchWheelActivity"
+            android:name=".DriverRouteInProgressActivity"
             android:exported="false" />
         <activity
             android:name=".NewPasswordActivity"
@@ -71,6 +68,19 @@
         <activity
             android:name=".MainActivity"
             android:exported="false" />
+        <activity
+            android:name=".DriverPassengersListActivity"
+            android:exported="false" />
+          android:name=".DriverRateActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverAviableActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SearchWheelActivity"
     </application>
 
 </manifest>

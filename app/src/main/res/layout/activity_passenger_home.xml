@@ -16,6 +16,8 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/cardViewIcon"
+        <TextView
+        android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
@@ -163,14 +165,24 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
-
-                        <TextView
+                      
+                      <TextView
                             android:id="@+id/textViewDestination2Title"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Parque La Colina"
                             android:textSize="16sp"
                             android:textColor="@android:color/black" />
+
+    <Button
+        android:id="@+id/btnRouteInProgressPassenger"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ruta en Progreso"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
                         <TextView
                             android:id="@+id/textViewDestination2Subtitle"

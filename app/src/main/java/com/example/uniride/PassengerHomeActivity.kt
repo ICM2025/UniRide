@@ -2,19 +2,27 @@ package com.example.uniride
 
 import android.content.Intent
 import android.os.Bundle
+
 import android.util.Log
 import android.view.View
 import com.bumptech.glide.Glide
 import com.example.uniride.databinding.ActivityPassengerHomeBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-
+import com.example.uniride.databinding.ActivityPassengerHomeBinding
 class PassengerHomeActivity : BottomMenuActivity() {
     private lateinit var binding : ActivityPassengerHomeBinding
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+  
+class PassengerHomeActivity : BottomMenuActivity() {
+    private lateinit var binding: ActivityPassengerHomeBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityPassengerHomeBinding.inflate(layoutInflater)
 
         binding = ActivityPassengerHomeBinding.inflate(layoutInflater)
+        bottomMenuBinding.container.removeAllViews()
+        bottomMenuBinding.container.addView(binding.root)
 
         // Usar la vista raíz del binding para el contenedor del menú inferior
         bottomMenuBinding.container.removeAllViews()
@@ -26,9 +34,16 @@ class PassengerHomeActivity : BottomMenuActivity() {
         binding.cardSearch.setOnClickListener { navigateToSearchWheelActivity() }
     }
 
-    private fun navigateToSearchWheelActivity() {
+        private fun navigateToSearchWheelActivity() {
         val intent = Intent(baseContext, SearchWheelActivity::class.java)
         startActivity(intent)
+        binding.btnRouteInProgressPassenger.setOnClickListener {
+            val intent = Intent(this, PassengerRouteInProgressActivity::class.java).apply {
+                putExtra("ESTIMATED_TIME", 25) // Tiempo estimado inicial
+                putExtra("DISTANCE", 3) // Distancia inicial
+            }
+            startActivity(intent)
+        }
     }
 
     private fun loadImage() {
