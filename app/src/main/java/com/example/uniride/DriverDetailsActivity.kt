@@ -11,9 +11,9 @@ import com.example.uniride.databinding.ActivityDriverDetailsBinding
 
 class DriverDetailsActivity : AppCompatActivity() {
     private lateinit var binding : ActivityDriverDetailsBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_driver_details)
         binding = ActivityDriverDetailsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -23,21 +23,18 @@ class DriverDetailsActivity : AppCompatActivity() {
 
         Log.d("DriverDetailActivity", "Nombre: $driverName, Email: $driverEmail, Imagen: $driverImageResId")
 
-        findViewById<TextView>(R.id.driverNameText).text = driverName
-        findViewById<TextView>(R.id.driverEmailText).text = driverEmail
+        binding.driverNameText.text = driverName
+        binding.driverEmailText.text = driverEmail
 
-        val driverImageView = findViewById<ImageView>(R.id.driverImageView)
         if (driverImageResId != -1) {
-            driverImageView.setImageResource(driverImageResId)
+            binding.driverImageView.setImageResource(driverImageResId)
         } else {
-            driverImageView.setImageResource(R.drawable.ic_profile)  // Imagen de respaldo
+            binding.driverImageView.setImageResource(R.drawable.ic_profile)
         }
 
-        binding.buttonQualify.setOnClickListener() {
+        binding.buttonQualify.setOnClickListener {
             val intent = Intent(this, DriverRateActivity::class.java)
             startActivity(intent)
         }
-
-
     }
 }

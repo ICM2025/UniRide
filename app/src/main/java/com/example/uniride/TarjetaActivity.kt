@@ -4,37 +4,35 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
+import com.example.uniride.databinding.ActivityTarjetaBinding
 
 class TarjetaActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityTarjetaBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_tarjeta)
+        binding = ActivityTarjetaBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         // Botón de regreso
-        val btnBack = findViewById<ImageButton>(R.id.btnBackTarjeta)
-        btnBack.setOnClickListener {
+        binding.btnBackTarjeta.setOnClickListener {
             finish() // Regresa a la pantalla anterior
         }
 
-        // Referencias a los 3 botones
-        val btnMasterCard = findViewById<ImageButton>(R.id.btnMasterCard)
-        val btnVisa = findViewById<ImageButton>(R.id.btnVisa)
-        val btnNequi = findViewById<ImageButton>(R.id.btnNequi)
-
         // Listener para MasterCard
-        btnMasterCard.setOnClickListener {
+        binding.btnMasterCard.setOnClickListener {
             val intent = Intent(this, InfoTarjetaActivity::class.java)
             startActivity(intent)
         }
 
         // Listener para Visa
-        btnVisa.setOnClickListener {
+        binding.btnVisa.setOnClickListener {
             val intent = Intent(this, InfoTarjetaActivity::class.java)
             startActivity(intent)
         }
 
         // Listener para Nequi
-        btnNequi.setOnClickListener {
+        binding.btnNequi.setOnClickListener {
             val intent = Intent(this, InfoTarjetaActivity::class.java)
             startActivity(intent)
         }

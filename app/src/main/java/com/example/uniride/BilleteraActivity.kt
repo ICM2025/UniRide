@@ -5,28 +5,29 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
+import com.example.uniride.databinding.ActivityBilleteraBinding
 
 class BilleteraActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityBilleteraBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_billetera)
+        binding = ActivityBilleteraBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         // Botón de regreso
-        val btnBack = findViewById<ImageButton>(R.id.btnBackBilletera)
-        btnBack.setOnClickListener {
+        binding.btnBackBilletera.setOnClickListener {
             finish()  // Regresa a la actividad anterior
         }
 
         // Botón Depositar - Tarjeta
-        val btnDepositar = findViewById<Button>(R.id.btnDepositar)
-        btnDepositar.setOnClickListener {
+        binding.btnDepositar.setOnClickListener {
             val intent = Intent(this, TarjetaActivity::class.java)
             startActivity(intent)
         }
 
         // Botón Salir
-        val btnSalir = findViewById<Button>(R.id.btnSalir)
-        btnSalir.setOnClickListener {
+        binding.btnSalir.setOnClickListener {
             finish() // Cierra la actividad
         }
     }

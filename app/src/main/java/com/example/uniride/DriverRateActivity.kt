@@ -21,7 +21,7 @@ class DriverRateActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val adapter = UserAdapter(this, usersComent)
-        binding.userData.adapter = adapter  // Asegúrate de que userData está en el XML
+        binding.userData.adapter = adapter
     }
 
 }
