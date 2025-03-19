@@ -1,5 +1,6 @@
 package com.example.uniride
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import com.example.uniride.databinding.ActivityDriverHomeBinding
@@ -18,8 +19,15 @@ class DriverHomeActivity : BottomMenuActivity() {
         bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_home
 
         //EXAMPLE
-        binding.driverButton.setOnClickListener {
+        binding.btnDriver.setOnClickListener {
             Toast.makeText(this, "Successful", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.btnRouteInProgress.setOnClickListener{
+            val intent = Intent(this, DriverRouteInProgressActivity::class.java).apply {
+                putExtra("AVAILABLE_SEATS", 0)
+            }
+            startActivity(intent)
         }
 
     }

@@ -13,10 +13,20 @@
         android:theme="@style/Theme.UniRide"
         tools:targetApi="31">
         <activity
+            android:name=".MessageActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PassengerRouteInProgressActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverRouteInProgressActivity"
+            android:exported="false" />
+        <activity
             android:name=".PassengerHomeActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -40,6 +50,9 @@
             android:exported="false" />
         <activity
             android:name=".MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverPassengersListActivity"
             android:exported="false" />
     </application>
 
