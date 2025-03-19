@@ -14,15 +14,17 @@ class PassengerProfileActivity : BottomMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPassengerProfileBinding.inflate(layoutInflater)
-        val rootView = binding.root
-        setContentView(rootView)
-        super.setupBottomNavigation()
+        bottomMenuBinding.container.removeAllViews()
+        bottomMenuBinding.container.addView(binding.root)
+        bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_profile
 
         binding.btnBack.setOnClickListener {
-            finish()
+            if (isPassengerMode) {
+                startActivity(Intent(this, PassengerHomeActivity::class.java))
+            } else {
+                startActivity(Intent(this, DriverHomeActivity::class.java))
+            }
         }
-
-        bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_profile
         loadUserData()
 
         binding.btnEditProfile.setOnClickListener {

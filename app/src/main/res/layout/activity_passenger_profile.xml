@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".PassengerProfileActivity">
 
-    <!-- Botón de Regreso -->
     <ImageButton
         android:id="@+id/btnBack"
         android:layout_width="40dp"
@@ -24,8 +23,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:padding="16dp"
-        app:layout_constraintTop_toBottomOf="@id/btnBack"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavInclude">
+        app:layout_constraintTop_toBottomOf="@id/btnBack">
 
         <TextView
             android:id="@+id/ProfileTitle"
@@ -164,12 +162,4 @@
         </androidx.cardview.widget.CardView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <include
-        android:id="@+id/bottomNavInclude"
-        layout="@layout/activity_bottom_menu"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>
