@@ -31,7 +31,7 @@ class DriverAdapter(private val context: Context, private val drivers: List<Driv
         driverName.text = driver.name
 
         view.setOnClickListener {
-            val intent = Intent(context, DriverDetailsActivity::class.java).apply {
+            val intent = Intent(context, DriverProfileActivity::class.java).apply {
                 putExtra("DRIVER_NAME", driver.name)
                 putExtra("DRIVER_EMAIL", driver.email)
                 putExtra("DRIVER_IMAGE", driver.imageResId)

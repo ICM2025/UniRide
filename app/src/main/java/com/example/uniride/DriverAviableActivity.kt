@@ -28,7 +28,7 @@ class DriverAviableActivity : AppCompatActivity() {
         binding.driverData.setOnItemClickListener { _, _, position, _ ->
             val selectedDriver = drivers[position]
 
-            val intent = Intent(this, DriverDetailsActivity::class.java)
+            val intent = Intent(this, DriverProfileActivity::class.java)
             intent.putExtra("DRIVER_NAME", selectedDriver.name)
             intent.putExtra("DRIVER_IMAGE", selectedDriver.imageResId)
             intent.putExtra("DRIVER_EMAIL", selectedDriver.email)
