@@ -3,18 +3,14 @@ package com.example.uniride
 import android.content.Intent
 import android.os.Bundle
 
-import android.util.Log
 import android.view.View
 import com.bumptech.glide.Glide
 import com.example.uniride.databinding.ActivityPassengerHomeBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.example.uniride.databinding.ActivityPassengerHomeBinding
-class PassengerHomeActivity : BottomMenuActivity() {
-    private lateinit var binding : ActivityPassengerHomeBinding
-    private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
-  
+
 class PassengerHomeActivity : BottomMenuActivity() {
     private lateinit var binding: ActivityPassengerHomeBinding
+    private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +30,7 @@ class PassengerHomeActivity : BottomMenuActivity() {
         binding.cardSearch.setOnClickListener { navigateToSearchWheelActivity() }
     }
 
-        private fun navigateToSearchWheelActivity() {
+    private fun navigateToSearchWheelActivity() {
         val intent = Intent(baseContext, SearchWheelActivity::class.java)
         startActivity(intent)
         binding.btnRouteInProgressPassenger.setOnClickListener {
@@ -47,7 +43,8 @@ class PassengerHomeActivity : BottomMenuActivity() {
     }
 
     private fun loadImage() {
-        val imageUrl = "https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_1600,c_limit/GoogleMapTA.jpg"
+        val imageUrl =
+            "https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_1600,c_limit/GoogleMapTA.jpg"
 
         Glide.with(this)
             .load(imageUrl)

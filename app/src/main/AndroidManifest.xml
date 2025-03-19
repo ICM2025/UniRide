@@ -71,7 +71,8 @@
         <activity
             android:name=".DriverPassengersListActivity"
             android:exported="false" />
-          android:name=".DriverRateActivity"
+        <activity
+            android:name=".DriverRateActivity"
             android:exported="false" />
         <activity
             android:name=".DriverDetailsActivity"
@@ -81,6 +82,7 @@
             android:exported="false" />
         <activity
             android:name=".SearchWheelActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
