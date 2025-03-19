@@ -18,4 +18,13 @@
     <string name="new_password_text">Por favor ingrese su nueva contraseña</string>
     <string name="password_confirm">Confirmar contraseña</string>
     <string name="continu">Continuar</string>
+    <string name="back">Regresar</string>
+    <string name="titulo_billetera">Billetera</string>
+    <string name="saldo_a_favor">Saldo a Favor:</string>
+    <string name="deuda">Deuda:</string>
+    <string name="depositar_tarjeta">Depositar - Tarjeta</string>
+    <string name="salir">Salir</string>
+    <string name="mastercard">MasterCard</string>
+    <string name="visa">Visa</string>
+    <string name="nequi">Nequi</string>
 </resources>
