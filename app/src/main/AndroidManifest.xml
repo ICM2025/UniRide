@@ -12,6 +12,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UniRide"
         tools:targetApi="31">
+        
+
+
+
+
+
+        <activity
+            android:name=".MessageActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PassengerRouteInProgressActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverRouteInProgressActivity"
+            android:exported="false" />
         <activity
             android:name=".NewPasswordActivity"
             android:exported="false"/>
@@ -56,6 +71,9 @@
             android:exported="false" />
         <activity
             android:name=".MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DriverPassengersListActivity"
             android:exported="false" />
     </application>
 
