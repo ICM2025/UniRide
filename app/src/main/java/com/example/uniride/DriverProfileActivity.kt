@@ -25,12 +25,11 @@ class DriverProfileActivity : BottomMenuActivity() {
             }
         }
 
-        // ✅ Obtener datos del intent
         val driverName = intent.getStringExtra("DRIVER_NAME") ?: "Desconocido"
         val driverEmail = intent.getStringExtra("DRIVER_EMAIL") ?: "No disponible"
         val driverImageResId = intent.getIntExtra("DRIVER_IMAGE", -1)
 
-        Log.d("DriverDetailActivity", "Nombre: $driverName, Email: $driverEmail, Imagen: $driverImageResId")
+        Log.d("DriverProfileActivity", "Nombre: $driverName, Email: $driverEmail, Imagen: $driverImageResId")
 
         binding.driverNameText.text = driverName
         binding.driverEmailText.text = driverEmail
@@ -42,7 +41,9 @@ class DriverProfileActivity : BottomMenuActivity() {
         }
 
         binding.buttonQualify.setOnClickListener {
-            startActivity(Intent(this, DriverRateActivity::class.java))
+
+            val intent = Intent(this, DriverRateActivity::class.java)
+            startActivity(intent)
         }
     }
 }
