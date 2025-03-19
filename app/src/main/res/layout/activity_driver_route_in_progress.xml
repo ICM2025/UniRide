@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".DriverRouteInProgressActivity">
 
-    <!-- Toolbar con título y botón de menú -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"

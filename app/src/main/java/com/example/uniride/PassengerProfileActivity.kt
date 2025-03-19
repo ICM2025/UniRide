@@ -18,6 +18,10 @@ class PassengerProfileActivity : BottomMenuActivity() {
         setContentView(rootView)
         super.setupBottomNavigation()
 
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_profile
         loadUserData()
 
@@ -65,18 +69,9 @@ class PassengerProfileActivity : BottomMenuActivity() {
             apply()
         }
 
-        // Since LoginActivity might not exist yet, we'll handle that gracefully
-        try {
-            // Attempt to navigate to login screen
-            val loginActivityClass = Class.forName("com.example.uniride.LoginActivity")
-            val intent = Intent(this, loginActivityClass)
-            // Clear back stack
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-        } catch (e: ClassNotFoundException) {
-            // If LoginActivity doesn't exist yet, just show a toast
-            Toast.makeText(this, "Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
-        }
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
 
         finish()
     }
