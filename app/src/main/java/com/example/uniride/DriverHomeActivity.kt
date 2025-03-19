@@ -18,10 +18,7 @@ class DriverHomeActivity : BottomMenuActivity() {
         // Select specific menu item
         bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_home
 
-        //EXAMPLE
-        binding.btnDriver.setOnClickListener {
-            Toast.makeText(this, "Successful", Toast.LENGTH_SHORT).show()
-        }
+
 
         binding.btnRouteInProgress.setOnClickListener{
             val intent = Intent(this, DriverRouteInProgressActivity::class.java).apply {
