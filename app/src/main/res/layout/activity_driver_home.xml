@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".DriverHomeActivity">
+
+    <ImageView
+        android:id="@+id/imageViewMap"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        app:srcCompat="@drawable/map" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardViewIcon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="32dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageView
+            android:id="@+id/imageView5"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            app:srcCompat="@drawable/id_bars" />
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardViewButtons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <!-- Botón Ruta en Progreso -->
+            <Button
+                android:id="@+id/btnRouteInProgress"
+                android:layout_width="170dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="@color/main_color"
+                android:textColor="@color/component_background"
+                android:text="Ruta en Progreso"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="12dp" />
+
+            <!-- Botón Publicar Ruta -->
+            <Button
+                android:id="@+id/btnPublishRoute"
+                android:layout_width="170dp"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/main_color"
+                android:textColor="@android:color/white"
+                android:text="Publicar Ruta"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="12dp" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

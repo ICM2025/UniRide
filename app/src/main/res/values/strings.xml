@@ -1,3 +1,30 @@
 <resources>
     <string name="app_name">UniRide</string>
+    <string name="text_init">Ingresar</string>
+    <string name="no_account">¿No tienes cuenta?</string>
+    <string name="register"><u>Registrate</u></string>
+    <string name="welcome">Bienvenido a UniRide</string>
+    <string name="institutional_email">Correo institucional</string>
+    <string name="password">Contraseña</string>
+    <string name="forgotAccount"><u><i>¿Olvido su correo o contraseña?</i></u></string>
+    <string name="user">Usuario</string>
+    <string name="create_account">Crear cuenta</string>
+    <string name="register2">Registrar</string>
+    <string name="recover_password">Recuperar contraseña</string>
+    <string name="recover_text">Por favor ingrese su correo de recuperación</string>
+    <string name="send_code">Enviar código</string>
+    <string name="code">Código</string>
+    <string name="recover">Recuperar</string>
+    <string name="new_password_text">Por favor ingrese su nueva contraseña</string>
+    <string name="password_confirm">Confirmar contraseña</string>
+    <string name="continu">Continuar</string>
+    <string name="back">Regresar</string>
+    <string name="titulo_billetera">Billetera</string>
+    <string name="saldo_a_favor">Saldo a Favor:</string>
+    <string name="deuda">Deuda:</string>
+    <string name="depositar_tarjeta">Depositar - Tarjeta</string>
+    <string name="salir">Salir</string>
+    <string name="mastercard">MasterCard</string>
+    <string name="visa">Visa</string>
+    <string name="nequi">Nequi</string>
 </resources>
