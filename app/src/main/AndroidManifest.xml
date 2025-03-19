@@ -14,6 +14,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UniRide"
         tools:targetApi="31">
+
+        <!-- Actividades existentes -->
         <activity
             android:name=".MessageActivity"
             android:exported="false" />
@@ -40,7 +42,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -83,6 +84,27 @@
         <activity
             android:name=".SearchWheelActivity"
             android:exported="false" />
-    </application>
+    </application
 
+        <!-- Pantalla de "Acerca de" -->
+        <activity
+            android:name=".AcercaDeActivity"
+            android:exported="false" />
+
+        <!-- Pantalla de "Billetera" -->
+        <activity
+            android:name=".BilleteraActivity"
+            android:exported="false" />
+
+        <!-- Pantalla de "Tarjeta" -->
+        <activity
+            android:name=".TarjetaActivity"
+            android:exported="false" />
+
+        <!-- Pantalla de "InfoTarjeta" -->
+        <activity
+            android:name=".InfoTarjetaActivity"
+            android:exported="false" />
+
+    </application>
 </manifest>
