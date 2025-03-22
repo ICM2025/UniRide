@@ -22,10 +22,9 @@ class DriverRouteInProgressActivity : BottomMenuActivity() {
         bottomMenuBinding.container.removeAllViews()
         bottomMenuBinding.container.addView(binding.root)
 
-        setupBottomNavigation()
-        loadDriverMenu()
-
-        isPassengerMode = false
+        // ELIMINADO: setupBottomNavigation()
+        // ELIMINADO: loadDriverMenu()
+        // ELIMINADO: isPassengerMode = false
 
         // Obtener los seats del intent
         availableSeats = intent.getIntExtra("AVAILABLE_SEATS", 0)
