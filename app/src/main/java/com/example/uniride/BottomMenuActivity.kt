@@ -28,14 +28,11 @@ open class BottomMenuActivity : AppCompatActivity() {
                 R.id.nav_home -> {
                     if (this !is PassengerHomeActivity && isPassengerMode) {
                         startActivity(Intent(this, PassengerHomeActivity::class.java))
-                        //Close current activity
                         finish()
-                    } else if (this !is DriverHomeActivity && !isPassengerMode) {
+                    } else if (this !is DriverHomeActivity && this !is DriverRouteInProgressActivity && !isPassengerMode) {
                         startActivity(Intent(this, DriverHomeActivity::class.java))
-                        //Close current activity
                         finish()
                     }
-                    //Item selection has been successfully handled
                     true
                 }
                 R.id.nav_profile -> {

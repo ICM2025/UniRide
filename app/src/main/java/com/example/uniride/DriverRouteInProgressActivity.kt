@@ -17,18 +17,24 @@ class DriverRouteInProgressActivity : BottomMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDriverRouteInProgressBinding.inflate(layoutInflater)
+
+        // Usar el mismo patrón que en DriverHomeActivity
         bottomMenuBinding.container.removeAllViews()
         bottomMenuBinding.container.addView(binding.root)
+
         setupBottomNavigation()
         loadDriverMenu()
 
         isPassengerMode = false
 
+        // Obtener los seats del intent
         availableSeats = intent.getIntExtra("AVAILABLE_SEATS", 0)
         binding.availableSeats.text = availableSeats.toString()
-        bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_home
-        setupButtonListeners()
 
+        // Establecer el ítem seleccionado del menú inferior
+        bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_home
+
+        setupButtonListeners()
     }
 
     private fun setupButtonListeners() {

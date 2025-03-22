@@ -15,7 +15,6 @@
         android:theme="@style/Theme.UniRide"
         tools:targetApi="31">
 
-        <!-- Actividades existentes -->
         <activity
             android:name=".MessageActivity"
             android:exported="false" />
@@ -84,22 +83,15 @@
         <activity
             android:name=".SearchWheelActivity"
             android:exported="false" />
-        <!-- Pantalla de "Acerca de" -->
         <activity
             android:name=".AcercaDeActivity"
             android:exported="false" />
-
-        <!-- Pantalla de "Billetera" -->
         <activity
             android:name=".BilleteraActivity"
             android:exported="false" />
-
-        <!-- Pantalla de "Tarjeta" -->
         <activity
             android:name=".TarjetaActivity"
             android:exported="false" />
-
-        <!-- Pantalla de "InfoTarjeta" -->
         <activity
             android:name=".InfoTarjetaActivity"
             android:exported="false" />
