@@ -22,6 +22,10 @@ class DriverRateActivity : AppCompatActivity() {
 
         val adapter = UserAdapter(this, usersComent)
         binding.userData.adapter = adapter
+
+        binding.btnBack.setOnClickListener{
+            finish()
+        }
     }
 
 }

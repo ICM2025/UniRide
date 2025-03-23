@@ -14,7 +14,7 @@ class RegisterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.ingresarButton.setOnClickListener{
+        binding.loginButton.setOnClickListener{
             startActivity(Intent(this, LoginActivity::class.java))
         }
         binding.createAccountButton.setOnClickListener{

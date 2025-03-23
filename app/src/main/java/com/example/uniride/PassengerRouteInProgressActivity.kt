@@ -41,8 +41,7 @@ class PassengerRouteInProgressActivity : BottomMenuActivity() {
     }
 
     private fun setupButtonListeners() {
-        binding.btnMenu.setOnClickListener {
-            Toast.makeText(this, "Menú", Toast.LENGTH_SHORT).show()
+        binding.btnBack.setOnClickListener {
             finish()
         }
 

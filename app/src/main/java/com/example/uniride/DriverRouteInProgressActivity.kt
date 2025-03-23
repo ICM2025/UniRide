@@ -37,14 +37,12 @@ class DriverRouteInProgressActivity : BottomMenuActivity() {
     }
 
     private fun setupButtonListeners() {
-        binding.btnMenu.setOnClickListener {
-            Toast.makeText(this, "Menú", Toast.LENGTH_SHORT).show()
-            finish()
-        }
-
         binding.btnPassenger.setOnClickListener {
             val intent = Intent(this, DriverPassengersListActivity::class.java)
             startActivity(intent)
+        }
+        binding.btnBack.setOnClickListener{
+            finish()
         }
     }
 
