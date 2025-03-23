@@ -1,100 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+        xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.UniRide"
-        tools:targetApi="31">
-
+            android:allowBackup="true"
+            android:dataExtractionRules="@xml/data_extraction_rules"
+            android:fullBackupContent="@xml/backup_rules"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.UniRide"
+            tools:targetApi="31">
         <activity
-            android:name=".MessageActivity"
-            android:exported="false" />
+                android:name=".EditProfileActivity"
+                android:exported="false" />
         <activity
-            android:name=".PassengerRouteInProgressActivity"
-            android:exported="false" />
+                android:name=".DriverPublishRouteActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverRouteInProgressActivity"
-            android:exported="false" />
+                android:name=".MessageActivity"
+                android:exported="false" />
         <activity
-            android:name=".NewPasswordActivity"
-            android:exported="false" />
+                android:name=".PassengerRouteInProgressActivity"
+                android:exported="false" />
         <activity
-            android:name=".RecoverPasswordActivity"
-            android:exported="false" />
+                android:name=".DriverRouteInProgressActivity"
+                android:exported="false" />
         <activity
-            android:name=".RegisterActivity"
-            android:exported="false" />
+                android:name=".NewPasswordActivity"
+                android:exported="false" />
         <activity
-            android:name=".LoginActivity"
-            android:exported="false" />
+                android:name=".RecoverPasswordActivity"
+                android:exported="false" />
         <activity
-            android:name=".InitialActivity"
-            android:exported="true">
+                android:name=".RegisterActivity"
+                android:exported="false" />
+        <activity
+                android:name=".LoginActivity"
+                android:exported="false" />
+        <activity
+                android:name=".InitialActivity"
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".PassengerHomeActivity"
-            android:exported="false" />
+                android:name=".PassengerHomeActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverManageTripsActivity"
-            android:exported="false" />
+                android:name=".DriverManageTripsActivity"
+                android:exported="false" />
         <activity
-            android:name=".PassengerSettingsActivity"
-            android:exported="false" />
+                android:name=".PassengerSettingsActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverProfileActivity"
-            android:exported="false" />
+                android:name=".DriverProfileActivity"
+                android:exported="false" />
         <activity
-            android:name=".PassengerProfileActivity"
-            android:exported="false" />
+                android:name=".PassengerProfileActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverHomeActivity"
-            android:exported="false" />
+                android:name=".DriverHomeActivity"
+                android:exported="false" />
         <activity
-            android:name=".BottomMenuActivity"
-            android:exported="false" />
+                android:name=".BottomMenuActivity"
+                android:exported="false" />
         <activity
-            android:name=".MainActivity"
-            android:exported="false" />
+                android:name=".MainActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverPassengersListActivity"
-            android:exported="false" />
+                android:name=".DriverPassengersListActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverRateActivity"
-            android:exported="false" />
+                android:name=".DriverRateActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverDetailsActivity"
-            android:exported="false" />
+                android:name=".DriverDetailsActivity"
+                android:exported="false" />
         <activity
-            android:name=".DriverAviableActivity"
-            android:exported="false" />
+                android:name=".DriverAviableActivity"
+                android:exported="false" />
         <activity
-            android:name=".SearchWheelActivity"
-            android:exported="false" />
+                android:name=".SearchWheelActivity"
+                android:exported="false" />
         <activity
-            android:name=".AcercaDeActivity"
-            android:exported="false" />
+                android:name=".AcercaDeActivity"
+                android:exported="false" />
         <activity
-            android:name=".BilleteraActivity"
-            android:exported="false" />
+                android:name=".BilleteraActivity"
+                android:exported="false" />
         <activity
-            android:name=".TarjetaActivity"
-            android:exported="false" />
+                android:name=".TarjetaActivity"
+                android:exported="false" />
         <activity
-            android:name=".InfoTarjetaActivity"
-            android:exported="false" />
-
+                android:name=".InfoTarjetaActivity"
+                android:exported="false" />
     </application>
+
 </manifest>

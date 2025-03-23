@@ -12,8 +12,8 @@ import com.example.uniride.model.Driver
 class DriverAviableActivity : AppCompatActivity() {
     private lateinit var binding: ActivityDriverAviableBinding
     private val drivers = listOf(
-        Driver("Andres Castro","Castro@gmail.com", R.drawable.ic_profile),
-        Driver("Maria Herrera","Herrerita@gmail.com", R.drawable.ic_profile)
+        Driver("Andres Castro", "Castro@gmail.com", R.drawable.ic_profile),
+        Driver("Maria Herrera", "Herrerita@gmail.com", R.drawable.ic_profile)
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +32,10 @@ class DriverAviableActivity : AppCompatActivity() {
             intent.putExtra("DRIVER_IMAGE", selectedDriver.imageResId)
             intent.putExtra("DRIVER_EMAIL", selectedDriver.email)
             startActivity(intent)
+        }
+
+        binding.btnBackDriverAvailable.setOnClickListener {
+            finish()
         }
     }
 }
