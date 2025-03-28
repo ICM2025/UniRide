@@ -3,7 +3,6 @@ package com.example.uniride
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.uniride.databinding.ActivityPassengerProfileBinding
 
@@ -28,7 +27,7 @@ class PassengerProfileActivity : BottomMenuActivity() {
         loadUserData()
 
         binding.btnEditProfile.setOnClickListener {
-            Toast.makeText(this, "Función de edición próximamente", Toast.LENGTH_SHORT).show()
+            openEditProfile()
         }
 
         binding.btnLogout.setOnClickListener {
@@ -76,5 +75,11 @@ class PassengerProfileActivity : BottomMenuActivity() {
         startActivity(intent)
 
         finish()
+    }
+
+    private fun openEditProfile() {
+        val intent = Intent(this, EditProfileActivity::class.java)
+        intent.putExtra("IS_DRIVER", false)
+        startActivity(intent)
     }
 }

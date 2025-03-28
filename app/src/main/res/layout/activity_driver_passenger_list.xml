@@ -7,7 +7,6 @@
         android:background="@android:color/white"
         tools:context=".DriverPassengersListActivity">
 
-    <!-- Botón para regresar a la pantalla anterior con estilo consistente -->
     <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="48dp"
@@ -48,7 +47,6 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- CardView principal con esquinas redondeadas similar a otros layouts -->
     <androidx.cardview.widget.CardView
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -72,7 +70,6 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                <!-- Primer pasajero -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -128,7 +125,6 @@
                             android:background="@color/component_background" />
                 </LinearLayout>
 
-                <!-- Segundo pasajero -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -184,7 +180,6 @@
                             android:background="@color/component_background" />
                 </LinearLayout>
 
-                <!-- Tercer pasajero -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

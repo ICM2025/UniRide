@@ -9,7 +9,6 @@
     android:background="@android:color/white"
     tools:context=".TarjetaActivity">
 
-    <!-- Botón de retroceso (flecha) -->
     <ImageButton
         android:id="@+id/btnBackTarjeta"
         android:layout_width="48dp"
@@ -23,7 +22,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Tarjeta principal con esquinas redondeadas -->
     <androidx.cardview.widget.CardView
         android:id="@+id/card_tarjeta"
         android:layout_width="0dp"
@@ -44,7 +42,6 @@
             android:orientation="vertical"
             android:gravity="center_horizontal">
 
-            <!-- Título "Depositar - Tarjeta" -->
             <TextView
                 android:id="@+id/tvTituloTarjeta"
                 android:layout_width="match_parent"
@@ -54,7 +51,6 @@
                 android:textAppearance="?android:attr/textAppearanceMedium"
                 android:textStyle="bold" />
 
-            <!-- ImageButton MasterCard -->
             <ImageButton
                 android:id="@+id/btnMasterCard"
                 android:layout_width="150dp"
@@ -65,7 +61,6 @@
                 android:scaleType="fitCenter"
                 app:srcCompat="@drawable/master" />
 
-            <!-- ImageButton Visa -->
             <ImageButton
                 android:id="@+id/btnVisa"
                 android:layout_width="150dp"
@@ -76,7 +71,6 @@
                 android:scaleType="fitCenter"
                 app:srcCompat="@drawable/visa" />
 
-            <!-- ImageButton Nequi -->
             <ImageButton
                 android:id="@+id/btnNequi"
                 android:layout_width="150dp"

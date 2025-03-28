@@ -9,7 +9,6 @@
         android:background="@android:color/white"
         tools:context=".DriverRateActivity">
 
-    <!-- Botón para regresar, como en otras pantallas -->
     <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="48dp"
@@ -82,7 +81,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Tarjeta con esquinas redondeadas como en otras pantallas -->
     <androidx.cardview.widget.CardView
             android:id="@+id/cardView2"
             android:layout_width="0dp"

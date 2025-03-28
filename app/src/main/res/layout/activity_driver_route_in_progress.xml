@@ -8,7 +8,6 @@
         android:background="@android:color/white"
         tools:context=".DriverRouteInProgressActivity">
 
-    <!-- Botón para regresar a la pantalla anterior (estilo consistente) -->
     <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="48dp"
@@ -22,7 +21,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Título de la pantalla con el mismo estilo que las demás pantallas -->
     <TextView
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
@@ -36,7 +34,6 @@
             app:layout_constraintStart_toEndOf="@+id/btnBack"
             app:layout_constraintTop_toTopOf="@+id/btnBack" />
 
-    <!-- Mapa (ocupando el espacio central) -->
     <ImageView
             android:id="@+id/mapImageView"
             android:layout_width="0dp"
@@ -52,7 +49,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/btnBack" />
 
-    <!-- Panel de información con CardView (estilo consistente con otras pantallas) -->
     <androidx.cardview.widget.CardView
             android:id="@+id/infoPanel"
             android:layout_width="0dp"

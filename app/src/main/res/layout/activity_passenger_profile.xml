@@ -8,7 +8,6 @@
         android:background="@android:color/white"
         tools:context=".PassengerProfileActivity">
 
-    <!-- Botón para regresar a la pantalla anterior -->
     <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="48dp"
@@ -22,7 +21,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Tarjeta principal del perfil -->
     <androidx.cardview.widget.CardView
             android:id="@+id/card_profile"
             android:layout_width="0dp"
@@ -45,7 +43,6 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-            <!-- Título -->
             <TextView
                     android:id="@+id/tvTituloProfile"
                     android:layout_width="wrap_content"
@@ -55,7 +52,6 @@
                     android:textSize="23dp"
                     android:textStyle="bold" />
 
-            <!-- Foto de perfil -->
             <androidx.cardview.widget.CardView
                     android:id="@+id/cardProfileImage"
                     android:layout_width="120dp"
@@ -72,14 +68,12 @@
                         android:src="@drawable/ic_person" />
             </androidx.cardview.widget.CardView>
 
-            <!-- Información del usuario -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:layout_marginTop="24dp">
 
-                <!-- Nombre -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -103,7 +97,6 @@
                             tools:text="Juan Esteban" />
                 </LinearLayout>
 
-                <!-- Número de viajes -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -127,7 +120,6 @@
                             tools:text="10" />
                 </LinearLayout>
 
-                <!-- Correo -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -152,7 +144,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Botones -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

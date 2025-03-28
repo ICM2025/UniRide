@@ -9,7 +9,6 @@
         android:background="@color/background_color"
         tools:context=".InfoTarjetaActivity">
 
-    <!-- Toolbar consistente -->
     <LinearLayout
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -40,7 +39,6 @@
                 android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Tarjeta principal con esquinas redondeadas -->
     <androidx.cardview.widget.CardView
             android:id="@+id/card_info_tarjeta"
             android:layout_width="0dp"
@@ -72,7 +70,6 @@
                     android:textStyle="bold"
                     android:layout_marginBottom="24dp" />
 
-            <!-- Contenedor para campos de tarjeta con estilo consistente -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -82,7 +79,6 @@
                     android:layout_marginBottom="16dp"
                     app:cornerRadius="10dp">
 
-                <!-- EditText: Número de Tarjeta -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -101,7 +97,6 @@
                         android:layout_marginBottom="16dp"
                         android:hint="0000 0000 0000 0000" />
 
-                <!-- EditText: Fecha de Expiración -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -120,7 +115,6 @@
                         android:layout_marginBottom="16dp"
                         android:hint="MM/AA" />
 
-                <!-- EditText: CVV/CVC2 -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -139,7 +133,6 @@
                         android:hint="123" />
             </LinearLayout>
 
-            <!-- Botón "Continuar" -->
             <Button
                     android:id="@+id/btnContinuar"
                     android:layout_width="match_parent"

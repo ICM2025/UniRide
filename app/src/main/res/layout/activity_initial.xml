@@ -31,7 +31,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Agregar logo de la app con un tamaño adecuado -->
         <ImageView
                 android:id="@+id/appLogo"
                 android:layout_width="235dp"

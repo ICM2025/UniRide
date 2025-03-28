@@ -9,7 +9,6 @@
         android:background="@color/background_color"
         tools:context=".BilleteraActivity">
 
-    <!-- Toolbar consistente -->
     <LinearLayout
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -40,7 +39,6 @@
                 android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Tarjeta principal -->
     <androidx.cardview.widget.CardView
             android:id="@+id/card_billetera"
             android:layout_width="0dp"
@@ -62,7 +60,6 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
-            <!-- Título -->
             <TextView
                     android:id="@+id/tvTituloBilletera"
                     android:layout_width="match_parent"
@@ -73,7 +70,6 @@
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
-            <!-- Sección azul con saldo y deuda -->
             <androidx.cardview.widget.CardView
                     android:id="@+id/card_saldos"
                     android:layout_width="match_parent"
@@ -90,7 +86,6 @@
                         android:orientation="vertical"
                         android:padding="24dp">
 
-                    <!-- Saldos -->
                     <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -115,7 +110,6 @@
                                 android:textSize="16sp" />
                     </LinearLayout>
 
-                    <!-- Deuda -->
                     <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -141,7 +135,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Botón Depositar - Tarjeta -->
             <Button
                     android:id="@+id/btnDepositar"
                     android:layout_width="match_parent"
@@ -152,7 +145,6 @@
                     android:textColor="@color/white"
                     android:textSize="16sp" />
 
-            <!-- Botón Salir -->
             <Button
                     android:id="@+id/btnSalir"
                     android:layout_width="match_parent"

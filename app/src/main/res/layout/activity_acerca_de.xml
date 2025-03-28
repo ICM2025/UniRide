@@ -9,7 +9,6 @@
         tools:context=".AcercaDeActivity"
         android:background="@color/background_color">
 
-    <!-- Toolbar consistente -->
     <LinearLayout
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -40,7 +39,6 @@
                 android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Contenedor con esquinas redondeadas para el texto de "Acerca de" -->
     <androidx.cardview.widget.CardView
             android:id="@+id/card_acerca_de"
             android:layout_width="0dp"

@@ -8,7 +8,6 @@
         android:background="@android:color/white"
         tools:context=".DriverAviableActivity">
 
-    <!-- Botón para regresar a la pantalla anterior -->
     <ImageButton
             android:id="@+id/btnBackDriverAvailable"
             android:layout_width="48dp"
@@ -22,7 +21,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Título de la pantalla -->
     <TextView
             android:id="@+id/tvTituloConductores"
             android:layout_width="wrap_content"
@@ -36,7 +34,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Tarjeta para la lista de conductores -->
     <androidx.cardview.widget.CardView
             android:id="@+id/card_conductores"
             android:layout_width="0dp"

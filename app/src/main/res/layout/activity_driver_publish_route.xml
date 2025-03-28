@@ -63,7 +63,6 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                <!-- Sección de origen -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -82,7 +81,6 @@
                         android:padding="12dp"
                         android:textColor="@android:color/black" />
 
-                <!-- Sección de destino -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -102,7 +100,6 @@
                         android:padding="12dp"
                         android:textColor="@android:color/black" />
 
-                <!-- Sección de fecha y hora -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -148,7 +145,6 @@
                         android:text="No seleccionado"
                         android:textSize="16sp" />
 
-                <!-- Sección de cupos disponibles -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -194,7 +190,6 @@
                             android:textSize="20sp" />
                 </LinearLayout>
 
-                <!-- Sección de descripción de la ruta -->
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -216,7 +211,6 @@
                         android:padding="12dp"
                         android:textColor="@android:color/black" />
 
-                <!-- Botón de publicar ruta -->
                 <Button
                         android:id="@+id/btnPublishRoute"
                         android:layout_width="match_parent"

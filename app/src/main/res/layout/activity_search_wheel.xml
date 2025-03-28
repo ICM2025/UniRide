@@ -8,7 +8,6 @@
         android:background="@android:color/white"
         tools:context=".SearchWheelActivity">
 
-    <!-- Botón para regresar, ajustado como en otras pantallas -->
     <ImageButton
             android:id="@+id/btnBackSearch"
             android:layout_width="48dp"
@@ -22,7 +21,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Tarjeta principal con esquinas redondeadas y gris más suave -->
     <androidx.cardview.widget.CardView
             android:id="@+id/card_search"
             android:layout_width="0dp"
@@ -44,7 +42,6 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-            <!-- Título -->
             <TextView
                     android:id="@+id/tvTituloSearch"
                     android:layout_width="wrap_content"
@@ -55,7 +52,6 @@
                     android:textSize="23dp"
                     android:textStyle="bold" />
 
-            <!-- Búsqueda -->
             <androidx.cardview.widget.CardView
                     android:id="@+id/searchCard"
                     android:layout_width="match_parent"
@@ -91,7 +87,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Lista de solicitudes -->
             <ListView
                     android:id="@+id/requestsListView"
                     android:layout_width="match_parent"
@@ -102,7 +97,6 @@
                     android:divider="#E0E0E0"
                     android:dividerHeight="1dp" />
 
-            <!-- Botón para mostrar más resultados o aplicar filtros -->
             <Button
                     android:id="@+id/btnApplyFilters"
                     android:layout_width="match_parent"

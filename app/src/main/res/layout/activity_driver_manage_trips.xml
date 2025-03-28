@@ -8,7 +8,6 @@
         android:background="@android:color/white"
         tools:context=".DriverManageTripsActivity">
 
-    <!-- Toolbar para navegación y título -->
     <LinearLayout
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -45,7 +44,6 @@
                 android:src="@android:drawable/ic_menu_manage" />
     </LinearLayout>
 
-    <!-- Card principal para gestión de viajes -->
     <androidx.cardview.widget.CardView
             android:id="@+id/cardCurrentTrip"
             android:layout_width="match_parent"
@@ -89,7 +87,6 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- Card para viajes programados -->
     <androidx.cardview.widget.CardView
             android:id="@+id/cardScheduledTrips"
             android:layout_width="match_parent"
@@ -125,7 +122,6 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                    <!-- Ejemplo de un viaje programado -->
                     <androidx.cardview.widget.CardView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -217,7 +213,6 @@
                         </LinearLayout>
                     </androidx.cardview.widget.CardView>
 
-                    <!-- Otro ejemplo de viaje programado -->
                     <androidx.cardview.widget.CardView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -313,7 +308,6 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- Botón para crear nuevo viaje -->
     <Button
             android:id="@+id/btnCreateTrip"
             android:layout_width="match_parent"
