@@ -28,11 +28,6 @@ class PassengerHomeActivity : BottomMenuActivity() {
         loadImage()
         binding.cardSearch.setOnClickListener { navigateToSearchWheelActivity() }
 
-        binding.buscarConductor.setOnClickListener {
-            val intent = Intent(this, DriverAviableActivity::class.java)
-            startActivity(intent)
-
-        }
     }
 
     private fun navigateToSearchWheelActivity() {
