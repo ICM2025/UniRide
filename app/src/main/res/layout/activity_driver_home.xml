@@ -53,7 +53,6 @@
             android:orientation="horizontal"
             android:padding="12dp">
 
-            <!-- Botón Ruta en Progreso -->
             <Button
                 android:id="@+id/btnRouteInProgress"
                 android:layout_width="170dp"
@@ -65,7 +64,6 @@
                 android:paddingHorizontal="20dp"
                 android:paddingVertical="12dp" />
 
-            <!-- Botón Publicar Ruta -->
             <Button
                 android:id="@+id/btnPublishRoute"
                 android:layout_width="170dp"

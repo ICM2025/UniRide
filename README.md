@@ -37,3 +37,9 @@ La aplicación permite que:
 - **Tomas Felipe Guerra:**
   Mi nombre es Tomas Felipe Guerra de 21 años, y soy estudiante de Ingenieria de Sistemas. Tengo conocimiento en los lenguajes de programacion de Java, C++, SQL, html, css, javascript. Busco el poder programar de manera correcta en equipo. Mis pasatiempos son los videojuegos y series.
 
+
+## Documentación del Proyecto
+- [Diagrama de Clases](./docs/Diagrama%20de%20clases.pdf)
+- [Diagrama de Casos de Uso](./docs/Diagrama%20de%20casos%20de%20uso.pdf)
+- [Mockups](./docs/Mockups.pdf)
+

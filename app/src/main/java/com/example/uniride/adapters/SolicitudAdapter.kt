@@ -19,10 +19,10 @@ class SolicitudAdapter(context: Context, private val solicitudes: List<Solicitud
 
         val solicitud = solicitudes[position]
 
-        val carIcon = view.findViewById<ImageView>(R.id.carIcon)
-        val title = view.findViewById<TextView>(R.id.requestTitle)
-        val details = view.findViewById<TextView>(R.id.requestDetails)
-        val price = view.findViewById<TextView>(R.id.requestPrice)
+        val carIcon = view.findViewById<ImageView>(R.id.carIcon1)
+        val title = view.findViewById<TextView>(R.id.requestTitle1)
+        val details = view.findViewById<TextView>(R.id.requestDetails1)
+        val price = view.findViewById<TextView>(R.id.requestPrice1)
 
         carIcon.setImageResource(R.drawable.ic_driver)
         title.text = solicitud.titulo

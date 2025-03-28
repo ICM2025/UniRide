@@ -11,10 +11,10 @@ class SearchWheelActivity : BottomMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivitySearchWheelBinding.inflate(layoutInflater)
 
-        setContentView(binding.root)
+        bottomMenuBinding.container.removeAllViews()
+        bottomMenuBinding.container.addView(binding.root)
 
         // Datos temporales
         val solicitudes = listOf(
@@ -30,6 +30,9 @@ class SearchWheelActivity : BottomMenuActivity() {
 
         val adapter = SolicitudAdapter(this, solicitudes)
         binding.requestsListView.adapter = adapter
+
+        // Select the home item in the bottom nav
+        bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_home
     }
 }
 

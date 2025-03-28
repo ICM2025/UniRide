@@ -5,42 +5,41 @@ import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.BaseAdapter
+import android.widget.Toast
 import com.example.uniride.model.Driver
-import com.example.uniride.R
 
 
-class DriverAdapter(private val context: Context, private val drivers: List<Driver>) : BaseAdapter() {
+class DriverAdapter(private val context: Context, private val drivers: List<Driver>) :
+    ArrayAdapter<Driver>(context, 0, drivers) {
 
-    override fun getCount(): Int = drivers.size
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+        var itemView = convertView
+        if (itemView == null) {
+            itemView = LayoutInflater.from(context).inflate(R.layout.item_driver, parent, false)
+        }
 
-    override fun getItem(position: Int): Any = drivers[position]
+        val currentDriver = drivers[position]
 
-    override fun getItemId(position: Int): Long = position.toLong()
+        val imageView = itemView?.findViewById<ImageView>(R.id.driverImageView)
+        val nameText = itemView?.findViewById<TextView>(R.id.driverNameText)
+        val emailText = itemView?.findViewById<TextView>(R.id.driverEmailText)
+        val verRutaBtn = itemView?.findViewById<Button>(R.id.btnVerRuta)
 
-    override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-        val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.driver_item, parent, false)
-        val driver = drivers[position]
+        imageView?.setImageResource(currentDriver.imageResId)
+        nameText?.text = currentDriver.name
+        emailText?.text = currentDriver.email
 
-        val driverImage = view.findViewById<ImageView>(R.id.imageView2)
-        val driverName = view.findViewById<TextView>(R.id.driverName)
-
-        driverImage.setImageResource(driver.imageResId)
-        driverName.text = driver.name
-
-        view.setOnClickListener {
-            val intent = Intent(context, DriverProfileActivity::class.java).apply {
-                putExtra("DRIVER_NAME", driver.name)
-                putExtra("DRIVER_EMAIL", driver.email)
-                putExtra("DRIVER_IMAGE", driver.imageResId)
-            }
+        verRutaBtn?.setOnClickListener {
+            Toast.makeText(context, "Ver ruta de ${currentDriver.name}", Toast.LENGTH_SHORT).show()
+            val intent = Intent(context, DriverRouteInProgressActivity::class.java)
+            intent.putExtra("DRIVER_NAME", currentDriver.name)
             context.startActivity(intent)
         }
 
-        return view
+        return itemView!!
     }
-
-
 }

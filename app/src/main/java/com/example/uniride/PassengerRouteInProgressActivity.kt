@@ -15,7 +15,10 @@ class PassengerRouteInProgressActivity : BottomMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPassengerRouteInProgressBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+
+        bottomMenuBinding.container.removeAllViews()
+        bottomMenuBinding.container.addView(binding.root)
+
         setupBottomNavigation()
         loadPassengerMenu()
 
@@ -28,6 +31,8 @@ class PassengerRouteInProgressActivity : BottomMenuActivity() {
         updateRouteInfo()
 
         setupButtonListeners()
+
+        bottomMenuBinding.bottomNav.selectedItemId = R.id.nav_home
     }
 
     private fun updateRouteInfo() {
@@ -36,8 +41,7 @@ class PassengerRouteInProgressActivity : BottomMenuActivity() {
     }
 
     private fun setupButtonListeners() {
-        binding.btnMenu.setOnClickListener {
-            Toast.makeText(this, "Menú", Toast.LENGTH_SHORT).show()
+        binding.btnBack.setOnClickListener {
             finish()
         }
 

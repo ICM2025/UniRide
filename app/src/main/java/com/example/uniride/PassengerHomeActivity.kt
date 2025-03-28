@@ -2,11 +2,10 @@ package com.example.uniride
 
 import android.content.Intent
 import android.os.Bundle
-
 import android.view.View
-import com.bumptech.glide.Glide
 import com.example.uniride.databinding.ActivityPassengerHomeBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.squareup.picasso.Picasso
 
 class PassengerHomeActivity : BottomMenuActivity() {
     private lateinit var binding: ActivityPassengerHomeBinding
@@ -40,12 +39,12 @@ class PassengerHomeActivity : BottomMenuActivity() {
         val imageUrl =
             "https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_1600,c_limit/GoogleMapTA.jpg"
 
-        Glide.with(this)
+        Picasso.get()
             .load(imageUrl)
-            .centerCrop()
             .placeholder(R.drawable.ic_launcher_background)
             .error(R.drawable.ic_launcher_background)
-            .into(binding.imageViewMap);
+            .into(binding.imageViewMap)
+
     }
 
     private fun setupBottomSheet() {

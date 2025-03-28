@@ -27,5 +27,10 @@ class DriverHomeActivity : BottomMenuActivity() {
             startActivity(intent)
         }
 
+        binding.btnPublishRoute.setOnClickListener{
+            val intent = Intent(this, DriverPublishRouteActivity::class.java)
+            startActivity(intent)
+        }
+
     }
 }

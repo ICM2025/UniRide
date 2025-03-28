@@ -9,4 +9,6 @@
     <!-- Background Colors -->
     <color name="background_color">#FFFCF9</color>
     <color name="component_background">#E0E0E0</color>
+    <color name="message_background">#0056B3</color>
+
 </resources>

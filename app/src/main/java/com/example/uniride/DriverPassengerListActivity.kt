@@ -1,6 +1,7 @@
 package com.example.uniride
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -126,8 +127,8 @@ class DriverPassengersListActivity : AppCompatActivity() {
         //Add the message button for every passenger
         val messageButton = Button(this).apply {
             text = "Mensaje"
-            setTextColor(ContextCompat.getColor(context, android.R.color.black))
-            setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_blue_light))
+            setTextColor(ContextCompat.getColor(context, android.R.color.white))
+            setBackgroundColor(Color.parseColor("#0056B3"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
