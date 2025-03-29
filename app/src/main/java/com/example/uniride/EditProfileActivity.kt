@@ -1,20 +1,41 @@
 package com.example.uniride
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import com.example.uniride.databinding.ActivityEditProfileBinding
+import java.io.File
 
 class EditProfileActivity : AppCompatActivity() {
     private lateinit var binding: ActivityEditProfileBinding
+    lateinit var uriCamera : Uri
+
+    private val getContentGallery =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let { loadImage(it) }
+        }
+
+    val getContentCamera = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            loadImage(uriCamera)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityEditProfileBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        val file = File(filesDir, "picFromCamera")
+        uriCamera = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
 
         setupButtonListeners()
         loadInitialProfileData()
@@ -34,7 +55,7 @@ class EditProfileActivity : AppCompatActivity() {
         }
 
         binding.btnChangePhoto.setOnClickListener {
-            Toast.makeText(this, "Cambio de foto pendiente", Toast.LENGTH_SHORT).show()
+            showImagePickerDialog()
         }
     }
 
@@ -70,5 +91,31 @@ class EditProfileActivity : AppCompatActivity() {
         }
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
+    }
+
+    private fun showImagePickerDialog() {
+        val options = arrayOf("Tomar foto", "Elegir de galería", "Cancelar")
+
+        AlertDialog.Builder(this)
+            .setTitle("Seleccionar foto de perfil")
+            .setItems(options) { dialog, which ->
+                when (which) {
+                    0 -> getContentCamera.launch(uriCamera)
+                    1 -> getContentGallery.launch("image/*")
+                    2 -> dialog.dismiss()
+                }
+            }
+            .show()
+    }
+
+    fun loadImage(uri: Uri){
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                binding.ivProfilePicture.setImageBitmap(bitmap)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error al cargar la imagen", Toast.LENGTH_SHORT).show()
+        }
     }
 }
