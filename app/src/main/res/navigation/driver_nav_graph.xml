@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/driver_nav_graph"
+    app:startDestination="@id/driverHomeFragment">
+
+    <fragment
+        android:id="@+id/driverHomeFragment"
+        android:name="com.example.uniride.ui.driver.home.DriverHomeFragment"
+        android:label="Publicar viaje"
+        tools:layout="@layout/fragment_driver_home" />
+
+    <fragment
+        android:id="@+id/driverTripsFragment"
+        android:name="com.example.uniride.ui.driver.trips.DriverTripsFragment"
+        android:label="Gestionar viajes"
+        tools:layout="@layout/fragment_driver_trips" />
+</navigation>
