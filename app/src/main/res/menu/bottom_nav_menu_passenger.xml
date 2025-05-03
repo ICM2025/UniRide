@@ -1,0 +1,16 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/passengerHomeFragment"
+        android:icon="@drawable/ic_home"
+        android:title="Inicio" />
+
+    <item
+        android:id="@+id/passengerRequestsFragment"
+        android:icon="@drawable/ic_manage_trips"
+        android:title="Mis solicitudes" />
+
+    <item
+        android:id="@+id/switchToDriver"
+        android:icon="@drawable/ic_driver"
+        android:title="Modo conductor" />
+</menu>
