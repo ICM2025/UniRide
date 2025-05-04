@@ -1,11 +1,13 @@
 package com.example.uniride.ui.passenger.home
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.uniride.databinding.FragmentPassengerHomeBinding
+import com.example.uniride.ui.passenger.search.SearchFlowActivity
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 class PassengerHomeFragment : Fragment() {
@@ -31,6 +33,12 @@ class PassengerHomeFragment : Fragment() {
             behavior.state = BottomSheetBehavior.STATE_COLLAPSED
             behavior.isDraggable = true
             behavior.isHideable = false
+        }
+
+        //navegar a busqueda del wheel
+        binding.etDestination.setOnClickListener {
+            val intent = Intent(requireContext(), SearchFlowActivity::class.java)
+            startActivity(intent)
         }
     }
 
