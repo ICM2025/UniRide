@@ -1,5 +1,7 @@
 package com.example.uniride.domain.model
 
+import java.time.LocalDate
+
 data class TravelOption(
     //val id: String,
     val driverName: String,
@@ -11,5 +13,7 @@ data class TravelOption(
     val origin: String,
     val destination: String,
     val departureTime: String,  // por ejemplo: "17:45"
-    val intermediateStops: List<String>
+    val intermediateStops: List<String>,
+    val travelDate: LocalDate
+
 )

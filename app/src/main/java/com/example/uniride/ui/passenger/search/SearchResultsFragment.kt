@@ -1,12 +1,10 @@
 package com.example.uniride.ui.passenger.search
 
 import android.os.Bundle
-import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
+import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.uniride.R
@@ -14,7 +12,7 @@ import com.example.uniride.databinding.FragmentSearchResultsBinding
 import com.example.uniride.domain.adapter.TravelOptionAdapter
 import com.example.uniride.domain.model.TravelOption
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import dagger.hilt.android.AndroidEntryPoint
+import java.time.LocalDate
 
 class SearchResultsFragment : Fragment() {
 
@@ -46,7 +44,8 @@ class SearchResultsFragment : Fragment() {
                 availableSeats = 2,
                 intermediateStops = listOf("UNAL", "Centro", "Santafé"),
                 drawableResId = R.drawable.ic_car,
-                driverImage = R.drawable.ic_profile
+                driverImage = R.drawable.ic_profile,
+                travelDate = LocalDate.parse("2025-05-04")
             ),
             TravelOption(
                 driverName = "Conductor 2",
@@ -58,7 +57,8 @@ class SearchResultsFragment : Fragment() {
                 availableSeats = 3,
                 intermediateStops = listOf("UNAL", "Titan"),
                 drawableResId = R.drawable.ic_car,
-                driverImage = R.drawable.ic_profile
+                driverImage = R.drawable.ic_profile,
+                travelDate = LocalDate.parse("2025-05-04")
             ),
             TravelOption(
                 driverName = "Conductor 2",
@@ -70,7 +70,8 @@ class SearchResultsFragment : Fragment() {
                 availableSeats = 3,
                 intermediateStops = listOf("UNAL", "Titan"),
                 drawableResId = R.drawable.ic_car,
-                driverImage = R.drawable.ic_profile
+                driverImage = R.drawable.ic_profile,
+                travelDate = LocalDate.parse("2025-05-04")
             ),
             TravelOption(
                 driverName = "Conductor 2",
@@ -82,7 +83,8 @@ class SearchResultsFragment : Fragment() {
                 availableSeats = 3,
                 intermediateStops = listOf("UNAL", "Titan"),
                 drawableResId = R.drawable.ic_car,
-                driverImage = R.drawable.ic_profile
+                driverImage = R.drawable.ic_profile,
+                travelDate = LocalDate.parse("2025-05-04")
             )
         )
 
