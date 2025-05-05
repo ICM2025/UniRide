@@ -122,8 +122,6 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback {
         // Setup bottom sheet
         setupBottomSheet()
 
-        // Setup click listeners
-        //setupClickListeners()
 
         // Check permissions
         checkLocationPermissions()
@@ -154,15 +152,6 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback {
             bottomSheetBehavior.isHideable = false
         }
     }
-/*
-    private fun setupClickListeners() {
-        binding.etDestination.setOnClickListener {
-            val intent = Intent(requireContext(), SearchFlowActivity::class.java)
-            startActivity(intent)
-        }
-    }
-
- */
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap

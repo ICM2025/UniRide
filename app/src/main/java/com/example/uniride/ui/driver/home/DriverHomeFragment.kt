@@ -115,11 +115,6 @@ class DriverHomeFragment : Fragment() ,OnMapReadyCallback {
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
 
-        // Setup bottom sheet
-        //setupBottomSheet()
-
-        // Setup click listeners
-        //setupClickListeners()
 
         // Check permissions
         checkLocationPermissions()
@@ -140,15 +135,6 @@ class DriverHomeFragment : Fragment() ,OnMapReadyCallback {
             }
         }
     }
-    /*
-        private fun setupClickListeners() {
-            binding.etDestination.setOnClickListener {
-                val intent = Intent(requireContext(), SearchFlowActivity::class.java)
-                startActivity(intent)
-            }
-        }
-
-     */
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
