@@ -119,8 +119,13 @@ class PassengerRequestsFragment : Fragment() {
                 status = TravelRequestStatus.Finished
             )
         )
+        //se le pasa función por parámetro para activar el bottom sheet
+        adapter = TravelRequestAdapter(requests) { selectedRequest ->
+            val bottomSheet = RequestDetailBottomSheet(selectedRequest)
+            bottomSheet.show(parentFragmentManager, "RequestDetail")
+        }
+        binding.rvRequests.adapter = adapter
 
-        adapter = TravelRequestAdapter(requests)
 
         binding.rvRequests.layoutManager = LinearLayoutManager(requireContext())
         binding.rvRequests.adapter = adapter

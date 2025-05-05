@@ -10,7 +10,8 @@ import com.example.uniride.domain.model.TravelRequest
 import com.example.uniride.domain.model.TravelRequestStatus
 
 class TravelRequestAdapter(
-    private val items: List<TravelRequest>
+    private val items: List<TravelRequest>,
+    private val onClick: (TravelRequest) -> Unit
 ) : RecyclerView.Adapter<TravelRequestAdapter.RequestViewHolder>() {
 
     inner class RequestViewHolder(
@@ -34,9 +35,8 @@ class TravelRequestAdapter(
         holder.binding.apply {
             tvDestination.text = "Destino: ${travel.destination}"
 
-            // Formato de fecha y hora
-            val formattedDate = item.requestDate.toLocalDate().toString()  // ej: "2025-05-05"
-            val formattedTime = travel.departureTime  // ej: "17:30"
+            val formattedDate = item.requestDate.toLocalDate().toString()
+            val formattedTime = travel.departureTime
             tvDatetime.text = "$formattedDate - $formattedTime"
 
             tvPrice.text = "$${travel.price}"
@@ -45,14 +45,18 @@ class TravelRequestAdapter(
             tvStatus.text = item.status.label
             tvStatus.setTextColor(ContextCompat.getColor(context, item.status.colorRes))
 
-            // para el histotial de viajes terminados
             if (item.status is TravelRequestStatus.Finished) {
                 holder.itemView.alpha = 0.8f
                 holder.itemView.isClickable = false
                 holder.itemView.setBackgroundResource(R.drawable.bg_item_finished)
+                // desactiva clicks
+                holder.itemView.setOnClickListener(null)
+            } else {
+                holder.itemView.setOnClickListener {
+                    //ejecuta la función lambda que se pasa por parámetro
+                    onClick(item)
+                }
             }
-
-
         }
     }
 
