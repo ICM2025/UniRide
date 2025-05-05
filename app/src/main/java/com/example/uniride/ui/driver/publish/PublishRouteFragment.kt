@@ -1,12 +1,17 @@
 package com.example.uniride.ui.driver.publish
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
@@ -32,8 +37,15 @@ class PublishRouteFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupVehicleSpinner()
         setupContinueButton()
-    }
 
+        initStopFields()
+        binding.btnAddStop.setOnClickListener {
+            addNewStopField()
+        }
+
+
+    }
+    //elegir uno de los vehículos registrados del conductor
     private fun setupVehicleSpinner() {
         vehicleList = loadVehiclesForUser() // Simulación o llamada real a DB
 
@@ -66,6 +78,7 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
+    //simulando que tiene carros registrados
     private fun loadVehiclesForUser(): List<Vehicle> {
         // Simulado
         return listOf(
@@ -73,6 +86,26 @@ class PublishRouteFragment : Fragment() {
             Vehicle( "Mazda", "3", 2022, "Gris", "XYZ987", listOf())
         )
     }
+
+    private fun initStopFields() {
+        addNewStopField() // primer campo por defecto
+    }
+
+
+    private fun addNewStopField() {
+        val stopView = layoutInflater.inflate(R.layout.item_stop_field, binding.stopsContainer, false)
+
+        val btnDelete = stopView.findViewById<ImageButton>(R.id.btn_delete)
+        btnDelete.setOnClickListener {
+            binding.stopsContainer.removeView(stopView)
+        }
+
+        // acá luego se añade para el de cambiar de orden
+
+        binding.stopsContainer.addView(stopView)
+    }
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()
