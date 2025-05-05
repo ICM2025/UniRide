@@ -5,6 +5,7 @@ data class TravelOption(
     val driverName: String,
     val description: String,
     val price: Int,
+    val driverImage: Int,
     val drawableResId: Int,
     val availableSeats: Int,
     val origin: String,

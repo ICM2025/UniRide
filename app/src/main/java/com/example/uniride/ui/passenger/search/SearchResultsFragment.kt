@@ -45,7 +45,8 @@ class SearchResultsFragment : Fragment() {
                 price = 11500,
                 availableSeats = 2,
                 intermediateStops = listOf("UNAL", "Centro", "Santafé"),
-                drawableResId = R.drawable.ic_car
+                drawableResId = R.drawable.ic_car,
+                driverImage = R.drawable.ic_profile
             ),
             TravelOption(
                 driverName = "Conductor 2",
@@ -56,7 +57,8 @@ class SearchResultsFragment : Fragment() {
                 price = 9800,
                 availableSeats = 3,
                 intermediateStops = listOf("UNAL", "Titan"),
-                drawableResId = R.drawable.ic_car
+                drawableResId = R.drawable.ic_car,
+                driverImage = R.drawable.ic_profile
             ),
             TravelOption(
                 driverName = "Conductor 2",
@@ -67,7 +69,8 @@ class SearchResultsFragment : Fragment() {
                 price = 9800,
                 availableSeats = 3,
                 intermediateStops = listOf("UNAL", "Titan"),
-                drawableResId = R.drawable.ic_car
+                drawableResId = R.drawable.ic_car,
+                driverImage = R.drawable.ic_profile
             ),
             TravelOption(
                 driverName = "Conductor 2",
@@ -78,14 +81,15 @@ class SearchResultsFragment : Fragment() {
                 price = 9800,
                 availableSeats = 3,
                 intermediateStops = listOf("UNAL", "Titan"),
-                drawableResId = R.drawable.ic_car
+                drawableResId = R.drawable.ic_car,
+                driverImage = R.drawable.ic_profile
             )
         )
 
         adapter = TravelOptionAdapter(options) { selected ->
-            Toast.makeText(requireContext(), "Seleccionaste: ${selected.driverName}", Toast.LENGTH_SHORT).show()
-
+            TravelDetailBottomSheet(selected).show(parentFragmentManager, "TravelDetail")
         }
+
 
         binding.rvOptions.layoutManager = LinearLayoutManager(requireContext())
         binding.rvOptions.adapter = adapter

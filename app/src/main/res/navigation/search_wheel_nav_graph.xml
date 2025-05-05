@@ -21,13 +21,8 @@
         android:label="Resultados"
         tools:layout="@layout/fragment_search_results">
         <action
-            android:id="@+id/action_searchResultsFragment_to_travelDetailFragment"
-            app:destination="@id/travelDetailFragment" />
+            android:id="@+id/action_searchResultsFragment_to_travelDetailFragment" />
     </fragment>
 
-    <fragment
-        android:id="@+id/travelDetailFragment"
-        android:name="com.example.uniride.ui.passenger.search.TravelDetailFragment"
-        android:label="Detalle del viaje"
-        tools:layout="@layout/fragment_travel_detail" />
+
 </navigation>
