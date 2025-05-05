@@ -7,6 +7,7 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import com.example.uniride.R
 import com.example.uniride.databinding.BottomSheetTravelDetailBinding
 import com.example.uniride.domain.model.TravelOption
@@ -47,6 +48,9 @@ class TravelDetailBottomSheet(private val travel: TravelOption) : BottomSheetDia
 
             //infla para mensaje de confirmación
             val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+
+            dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Cupo solicitado!"
+            dialogView.findViewById<TextView>(R.id.tv_secondary).text = "El conductor ha sido notificado"
 
             //crea AlertDialog usando el layout inflado
             val dialog = AlertDialog.Builder(activity)

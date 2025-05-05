@@ -1,9 +1,14 @@
 package com.example.uniride.ui.passenger.requests
 
+import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
+import com.example.uniride.R
 import com.example.uniride.databinding.BottomSheetTravelRequestDetailBinding
 import com.example.uniride.domain.model.TravelRequest
 import com.example.uniride.domain.model.TravelRequestStatus
@@ -59,9 +64,29 @@ class RequestDetailBottomSheet(
         }
 
         binding.btnRequest.setOnClickListener {
-
+            val activity = requireActivity()
             dismiss()
+
+            val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+
+
+            dialogView.findViewById<TextView>(R.id.tv_success).text = "Solicitud actualizada"
+            dialogView.findViewById<TextView>(R.id.tv_secondary).text = "El conductor ha sido notificado"
+
+            val dialog = AlertDialog.Builder(activity)
+                .setView(dialogView)
+                .create()
+
+            dialog.window?.setDimAmount(0.75f)
+            dialog.window?.attributes?.windowAnimations = R.style.DialogFadeAnimation
+
+            dialog.show()
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                dialog.dismiss()
+            }, 1500)
         }
+
     }
 
     override fun onDestroyView() {
