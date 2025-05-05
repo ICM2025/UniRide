@@ -11,4 +11,11 @@
     <color name="component_background">#F5F5F5 </color>
     <color name="message_background">#0056B3</color>
 
+<!--    status-->
+    <color name="status_pending">#FFA726</color>
+    <color name="status_accepted">#4CAF50</color>
+    <color name="status_rejected">#F44336</color>
+    <color name="status_finished">#9E9E9E</color>
+
+
 </resources>
