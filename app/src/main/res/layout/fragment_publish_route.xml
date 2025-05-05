@@ -1,14 +1,260 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.driver.publish.PublishRouteFragment">
+    android:background="@color/background_color"
+    android:paddingVertical="32dp"
+    android:fillViewport="true">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
 
-</FrameLayout>
+        <!-- Título -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Publicar nuevo viaje"
+            android:textColor="@color/text_color"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Contenedor blanco -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_edittext_rounded"
+            android:padding="20dp"
+            android:layout_marginBottom="24dp"
+            android:elevation="4dp">
+
+            <!-- Vehículo -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vehículo"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp">
+
+                <Spinner
+                    android:id="@+id/spinner_car"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_edittext_rounded"
+                    android:padding="8dp" />
+
+            </LinearLayout>
+
+            <!-- Origen -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Origen"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_origin"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Escribe el origen"
+                android:background="@drawable/bg_edittext_rounded"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Destino -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Destino"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_destination"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="¿A dónde vamos?"
+                android:background="@drawable/bg_edittext_rounded"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Paradas intermedias -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Paradas intermedias"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp" />
+
+            <LinearLayout
+                android:id="@+id/stops_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+
+            <ImageButton
+                android:id="@+id/btn_add_stop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_plus"
+                android:contentDescription="Agregar parada"
+                android:layout_gravity="end"
+                android:tint="@color/main_color"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Fecha -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fecha de salida"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_date"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Selecciona fecha"
+                android:background="@drawable/bg_edittext_rounded"
+                android:focusable="false"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Hora -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hora de salida"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_time"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Selecciona hora"
+                android:background="@drawable/bg_edittext_rounded"
+                android:focusable="false"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Cupos disponibles -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cupos disponibles"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_seats"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="¿Cuántos cupos?"
+                android:background="@drawable/bg_edittext_rounded"
+                android:inputType="number"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Precio -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Precio"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_price"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Valor por pasajero"
+                android:background="@drawable/bg_edittext_rounded"
+                android:inputType="number"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Descripción -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Descripción (opcional)"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ej: Sin música, sin mascotas..."
+                android:minLines="2"
+                android:maxLines="5"
+                android:background="@drawable/bg_edittext_rounded"
+                android:inputType="textMultiLine"
+                android:padding="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+        </LinearLayout>
+
+        <!-- Botón Continuar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_continue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Publicar"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/main_color"
+            android:textAllCaps="false"
+            app:cornerRadius="24dp"
+            app:icon="@drawable/ic_check"
+            app:iconTint="@android:color/white"
+            android:layout_marginBottom="32dp" />
+
+    </LinearLayout>
+</ScrollView>

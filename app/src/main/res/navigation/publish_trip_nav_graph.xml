@@ -9,5 +9,14 @@
         android:id="@+id/publishRouteFragment"
         android:name="com.example.uniride.ui.driver.publish.PublishRouteFragment"
         android:label="Publicar ruta"
-        tools:layout="@layout/fragment_publish_route" />
+        tools:layout="@layout/fragment_publish_route" >
+        <action
+            android:id="@+id/action_publishRouteFragment_to_addVehicleFragment"
+            app:destination="@id/addVehicleFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/addVehicleFragment"
+        android:name="com.example.uniride.ui.driver.vehicles.AddVehicleFragment"
+        android:label="fragment_add_vehicle"
+        tools:layout="@layout/fragment_add_vehicle" />
 </navigation>
