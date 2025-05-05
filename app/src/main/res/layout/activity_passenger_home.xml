@@ -1,58 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".PassengerHomeActivity">
-
-    <ImageView
-        android:id="@+id/imageViewMap"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/main"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        app:srcCompat="@drawable/map" />
+        tools:context=".PassengerHomeActivity">
+
+    <!-- Reemplazado ImageView por el fragmento de mapa de Google -->
+    <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/mapFragment"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/cardViewIcon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginVertical="48dp"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="@android:color/white">
+            android:id="@+id/cardViewIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginVertical="48dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white">
 
         <ImageView
-            android:id="@+id/imageView5"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="8dp"
-            app:srcCompat="@drawable/id_bars" />
+                android:id="@+id/imageView5"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                app:srcCompat="@drawable/id_bars" />
     </androidx.cardview.widget.CardView>
 
     <androidx.core.widget.NestedScrollView
-        android:id="@+id/bottomSheet"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="12dp"
-        android:background="@android:color/white"
-        android:paddingTop="16dp"
-        android:clipToOutline="true"
-        android:elevation="8dp"
-        android:outlineProvider="bounds"
-        app:behavior_hideable="false"
-        app:behavior_peekHeight="80dp"
-        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+            android:id="@+id/bottomSheet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:background="@android:color/white"
+            android:paddingTop="16dp"
+            android:clipToOutline="true"
+            android:elevation="8dp"
+            android:outlineProvider="bounds"
+            app:behavior_hideable="false"
+            app:behavior_peekHeight="80dp"
+            app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
-        <LinearLayout
+    </androidx.core.widget.NestedScrollView>
+
+    <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="8dp">
 
-            <View
+        <View
                 android:id="@+id/dragHandle"
                 android:layout_width="40dp"
                 android:layout_height="4dp"
@@ -60,7 +62,7 @@
                 android:layout_marginTop="8dp"
                 android:background="@android:color/darker_gray" />
 
-            <androidx.cardview.widget.CardView
+        <androidx.cardview.widget.CardView
                 android:id="@+id/cardSearch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -72,7 +74,7 @@
                 android:focusable="true"
                 android:elevation="8dp">
 
-                <LinearLayout
+            <LinearLayout
                     android:id="@+id/layoutSearch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -82,30 +84,30 @@
                     android:paddingVertical="12dp"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                <ImageView
                         android:id="@+id/imageViewSearch"
                         android:layout_width="25dp"
                         android:layout_height="25dp"
                         android:src="@drawable/ic_magnifying_glass"
                         android:layout_marginEnd="16dp" />
 
-                    <TextView
+                <TextView
                         android:id="@+id/textViewWhereTo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="¿A dónde vas?"
                         android:textColor="@color/text_color"
                         android:textSize="18sp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
-            <LinearLayout
+        <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <LinearLayout
+            <LinearLayout
                     android:id="@+id/layoutDestination1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -113,18 +115,18 @@
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_location"
                         android:layout_marginEnd="16dp" />
 
-                    <LinearLayout
+                <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <TextView
+                    <TextView
                             android:id="@+id/textViewDestination1Title"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -132,17 +134,17 @@
                             android:textSize="16sp"
                             android:textColor="@android:color/black" />
 
-                        <TextView
+                    <TextView
                             android:id="@+id/textViewDestination1Subtitle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Bogotá"
                             android:textSize="14sp"
                             android:textColor="@android:color/darker_gray" />
-                    </LinearLayout>
                 </LinearLayout>
+            </LinearLayout>
 
-                <LinearLayout
+            <LinearLayout
                     android:id="@+id/layoutDestination2"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -150,35 +152,35 @@
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackground">
 
-                    <ImageView
+                <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_location"
                         android:layout_marginEnd="16dp" />
 
-                    <LinearLayout
+                <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <TextView
+                    <TextView
                             android:id="@+id/textViewDestination2Title"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Parque La Colina"
                             android:textSize="16sp"
                             android:textColor="@android:color/black" />
-                        <TextView
+
+                    <TextView
                             android:id="@+id/textViewDestination2Subtitle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Bogotá"
                             android:textSize="14sp"
                             android:textColor="@android:color/darker_gray" />
-                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
