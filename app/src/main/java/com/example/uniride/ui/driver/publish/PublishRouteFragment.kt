@@ -1,17 +1,16 @@
 package com.example.uniride.ui.driver.publish
 
-import android.graphics.Color
+import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.Toast
-import androidx.core.content.ContextCompat
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
@@ -45,6 +44,7 @@ class PublishRouteFragment : Fragment() {
 
 
     }
+
     //elegir uno de los vehículos registrados del conductor
     private fun setupVehicleSpinner() {
         vehicleList = loadVehiclesForUser() // Simulación o llamada real a DB
@@ -55,12 +55,18 @@ class PublishRouteFragment : Fragment() {
             vehicleList.map { "${it.brand} ${it.model} (${it.licensePlate})" } + "Agregar vehículo"
         }
 
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
+        val adapter =
+            ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerCar.adapter = adapter
 
         binding.spinnerCar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
                 val selected = parent.getItemAtPosition(position).toString()
                 if (selected == "Agregar vehículo") {
                     findNavController().navigate(R.id.action_publishRouteFragment_to_addVehicleFragment)
@@ -73,17 +79,36 @@ class PublishRouteFragment : Fragment() {
 
     private fun setupContinueButton() {
         binding.btnContinue.setOnClickListener {
-            // Validaciones y navegación siguiente
-            Toast.makeText(requireContext(), "Viaje validado", Toast.LENGTH_SHORT).show()
+            val activity = requireActivity()
+
+            val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+
+            dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje publicado!"
+            dialogView.findViewById<TextView>(R.id.tv_secondary).text =
+                "Tu viaje ha sido creado exitosamente"
+
+            val dialog = AlertDialog.Builder(activity)
+                .setView(dialogView)
+                .create()
+
+            dialog.window?.setDimAmount(0.75f)
+            dialog.window?.attributes?.windowAnimations = R.style.DialogFadeAnimation
+            dialog.show()
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                dialog.dismiss()
+                activity.finish()
+            }, 1500)
         }
     }
+
 
     //simulando que tiene carros registrados
     private fun loadVehiclesForUser(): List<Vehicle> {
         // Simulado
         return listOf(
             Vehicle("Toyota", "Corolla", 2020, "Blanco", "ABC123", listOf()),
-            Vehicle( "Mazda", "3", 2022, "Gris", "XYZ987", listOf())
+            Vehicle("Mazda", "3", 2022, "Gris", "XYZ987", listOf())
         )
     }
 
@@ -93,7 +118,8 @@ class PublishRouteFragment : Fragment() {
 
 
     private fun addNewStopField() {
-        val stopView = layoutInflater.inflate(R.layout.item_stop_field, binding.stopsContainer, false)
+        val stopView =
+            layoutInflater.inflate(R.layout.item_stop_field, binding.stopsContainer, false)
 
         val btnDelete = stopView.findViewById<ImageButton>(R.id.btn_delete)
         btnDelete.setOnClickListener {
@@ -104,7 +130,6 @@ class PublishRouteFragment : Fragment() {
 
         binding.stopsContainer.addView(stopView)
     }
-
 
 
     override fun onDestroyView() {
