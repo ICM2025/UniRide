@@ -5,56 +5,83 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
+import com.example.uniride.databinding.FragmentAddVehicleBinding
+import com.example.uniride.domain.model.Vehicle
+import com.example.uniride.domain.model.VehicleBrand
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [AddVehicleFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class AddVehicleFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
+    private var _binding: FragmentAddVehicleBinding? = null
+    private val binding get() = _binding!!
+
+    private lateinit var selectedBrand: VehicleBrand
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_add_vehicle, container, false)
+    ): View {
+        _binding = FragmentAddVehicleBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment AddVehicleFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            AddVehicleFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupBrandSpinner()
+        setupSaveButton()
+    }
+
+    private fun setupBrandSpinner() {
+        val brandNames = VehicleBrand.allBrands().map { it.displayName }
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, brandNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerBrand.adapter = adapter
+
+        binding.spinnerBrand.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                selectedBrand = VehicleBrand.fromDisplayName(parent.getItemAtPosition(position).toString())
             }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                selectedBrand = VehicleBrand.Otro
+            }
+        }
+    }
+
+    private fun setupSaveButton() {
+        binding.btnSave.setOnClickListener {
+            val model = binding.inputModel.text.toString().trim()
+            val year = binding.inputYear.text.toString().toIntOrNull()
+            val color = binding.inputColor.text.toString().trim()
+            val plate = binding.inputPlate.text.toString().trim()
+
+            if (model.isEmpty() || year == null || color.isEmpty() || plate.isEmpty()) {
+                Toast.makeText(requireContext(), "Completa todos los campos", Toast.LENGTH_SHORT).show()
+                //esto es para salir del on click listener
+                return@setOnClickListener
+            }
+
+            val newVehicle = Vehicle(
+                brand = selectedBrand.displayName,
+                model = model,
+                year = year,
+                color = color,
+                licensePlate = plate,
+                imageUrls = emptyList() // Se puede modificar luego
+            )
+
+            // acá se debería guardar en la DB
+            findNavController().navigate(R.id.action_addVehicleFragment_to_publishRouteFragment)
+        }
+    }
+
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

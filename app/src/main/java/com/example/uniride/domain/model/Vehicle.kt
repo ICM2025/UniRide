@@ -9,5 +9,5 @@ data class Vehicle(
     val year: Int,
     val color: String,
     val licensePlate: String,
-    val imageUrls: List<String> = emptyList() 
+    val imageUrls: List<String> = emptyList()
 )

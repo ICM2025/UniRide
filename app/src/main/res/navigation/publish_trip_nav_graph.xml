@@ -18,5 +18,9 @@
         android:id="@+id/addVehicleFragment"
         android:name="com.example.uniride.ui.driver.vehicles.AddVehicleFragment"
         android:label="fragment_add_vehicle"
-        tools:layout="@layout/fragment_add_vehicle" />
+        tools:layout="@layout/fragment_add_vehicle" >
+        <action
+            android:id="@+id/action_addVehicleFragment_to_publishRouteFragment"
+            app:destination="@id/publishRouteFragment" />
+    </fragment>
 </navigation>
