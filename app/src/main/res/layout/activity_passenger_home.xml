@@ -29,7 +29,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:padding="8dp"
-                app:srcCompat="@drawable/id_bars" />
+                app:srcCompat="@drawable/ic_bars" />
     </androidx.cardview.widget.CardView>
 
     <androidx.core.widget.NestedScrollView
