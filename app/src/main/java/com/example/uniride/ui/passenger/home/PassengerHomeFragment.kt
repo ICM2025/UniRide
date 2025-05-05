@@ -1,6 +1,7 @@
 package com.example.uniride.ui.passenger.home
 
-//import com.example.uniride.ui.passenger.search.SearchFlowActivity
+
+import com.example.uniride.ui.passenger.search.SearchFlowActivity
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
@@ -12,6 +13,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
+
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -44,6 +46,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.Task
+
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 class PassengerHomeFragment : Fragment(), OnMapReadyCallback {
@@ -268,6 +271,12 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback {
 
             map.addMarker(markerOptions)
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation!!, 15f))
+        }
+
+        //navegar a busqueda del wheel
+        binding.etDestination.setOnClickListener {
+            val intent = Intent(requireContext(), SearchFlowActivity::class.java)
+            startActivity(intent)
         }
     }
 
