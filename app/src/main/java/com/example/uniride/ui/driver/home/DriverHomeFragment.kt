@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.Context
+import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.hardware.Sensor
@@ -13,7 +14,6 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,8 +22,10 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverHomeBinding
+import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -43,7 +45,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.Task
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 class DriverHomeFragment : Fragment() ,OnMapReadyCallback {
 
@@ -118,6 +119,13 @@ class DriverHomeFragment : Fragment() ,OnMapReadyCallback {
 
         // Check permissions
         checkLocationPermissions()
+
+        //navegar a actividad de publicar viaje
+        binding.btnPublishTrip.setOnClickListener {
+            val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
+            startActivity(intent)
+        }
+
 
 
     }

@@ -1,29 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        tools:context=".ui.driver.home.DriverHomeFragment"
-        android:background="@color/main_color">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/main_color"
+    tools:context=".ui.driver.home.DriverHomeFragment">
 
-    <!-- Reemplazar ImageView por MapFragment -->
+    <!-- Mapa -->
     <fragment
-            android:id="@+id/map"
-            android:name="com.google.android.gms.maps.SupportMapFragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-    <!-- Botón para centrar en la ubicación del usuario -->
+    <!-- Chip de estado del conductor -->
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:text="Disponible"
+        app:chipBackgroundColor="@color/white"
+        app:chipIcon="@drawable/ic_car"
+        app:iconTint="@color/status_accepted" />
+
+    <!-- Botón para centrar ubicación -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/myLocartion"
+        android:id="@+id/myLocation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="Mi ubicación"
+        android:src="@android:drawable/ic_menu_mylocation"
+        app:backgroundTint="@android:color/white"
+        app:tint="@color/text_color" />
+
+    <!-- Botón principal para publicar viaje -->
+
+    <!-- (Opcional) Tarjeta resumen de último viaje publicado -->
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_publish_trip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="96dp"
+        android:backgroundTint="@color/main_color"
+        android:iconTint="@android:color/white"
+        android:text="Publicar un viaje"
+        android:textColor="@android:color/white"
+        app:cornerRadius="16dp" />
+
+
+    <LinearLayout
+        android:id="@+id/card_last_trip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_margin="16dp"
+        android:layout_marginBottom="200dp"
+        android:elevation="6dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_trip_summary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end|top"
-            android:layout_margin="16dp"
-            android:contentDescription="Mi ubicación"
-            android:src="@android:drawable/ic_menu_mylocation"
-            app:backgroundTint="@android:color/white"
-            app:tint="@color/text_color" />
+            android:text="Último viaje: Chapinero → Cedritos"
+            android:textColor="@color/text_color"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_trip_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Salida: 4:00 PM"
+            android:textSize="14sp" />
+    </LinearLayout>
+
 
 </FrameLayout>
