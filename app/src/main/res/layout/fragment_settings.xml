@@ -1,14 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.shared.settings.SettingsFragment">
+    android:background="@color/background_color"
+    android:padding="20dp">
 
-    <!-- TODO: Update blank fragment layout -->
+    <!-- Botón de volver -->
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_button_circle"
+        android:src="@drawable/ic_arrow_left"
+        android:contentDescription="Volver"
+        android:tint="@color/text_color"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Título -->
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ajustes"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_color"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@id/btn_back"
+        app:layout_constraintBottom_toBottomOf="@id/btn_back"
+        android:layout_marginStart="12dp" />
 
-</FrameLayout>
+    <!-- Scroll para opciones -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/btn_back"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:divider="@drawable/divider_line"
+            android:showDividers="middle">
+
+            <!-- Sección: Cuenta -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cuenta"
+                android:textColor="@color/text_color"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/option_change_password"
+                style="@style/SettingsItem"
+                android:text="Cambiar contraseña" />
+
+            <TextView
+                android:id="@+id/option_change_email"
+                style="@style/SettingsItem"
+                android:text="Cambiar correo electrónico" />
+
+            <!-- Sección: Preferencias -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Preferencias"
+                android:textColor="@color/text_color"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switch_dark_mode"
+                style="@style/SettingsSwitch"
+                android:text="Activar modo oscuro" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switch_notifications"
+                style="@style/SettingsSwitch"
+                android:text="Notificaciones" />
+
+            <TextView
+                android:id="@+id/option_language"
+                style="@style/SettingsItem"
+                android:text="Idioma" />
+
+            <TextView
+                android:id="@+id/option_permissions"
+                style="@style/SettingsItem"
+                android:text="Ver permisos otorgados" />
+
+            <!-- Sección: Legal -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Legal"
+                android:textColor="@color/text_color"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/option_terms"
+                style="@style/SettingsItem"
+                android:text="Términos y condiciones" />
+
+            <TextView
+                android:id="@+id/option_privacy"
+                style="@style/SettingsItem"
+                android:text="Política de privacidad" />
+
+        </LinearLayout>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>
