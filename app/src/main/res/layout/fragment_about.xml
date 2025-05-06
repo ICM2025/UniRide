@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_color"
-    android:padding="24dp">
+    android:padding="32dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -12,15 +12,33 @@
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_button_circle"
-            android:src="@drawable/ic_arrow_left"
-            android:layout_gravity="start"
-            android:layout_marginBottom="12dp"
-            app:tint="@color/text_color" />
+        <!-- Encabezado: flecha + título -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="24dp">
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_button_circle"
+                android:src="@drawable/ic_arrow_left"
+                android:contentDescription="Volver"
+                android:tint="@color/main_color" />
+
+            <TextView
+                android:id="@+id/tv_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Acerca de nosotros"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_color"
+                android:layout_marginStart="12dp" />
+        </LinearLayout>
 
         <!-- Logo -->
         <ImageView
@@ -28,7 +46,6 @@
             android:layout_height="150dp"
             android:src="@drawable/logo"
             android:contentDescription="Logo UniRide"
-            android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp" />
 
         <!-- Nombre y versión -->
@@ -58,7 +75,7 @@
             android:textColor="@color/text_color"
             android:lineSpacingExtra="4dp"
             android:textAlignment="center"
-            android:layout_marginBottom="24dp" />
+            android:paddingVertical="32dp" />
 
         <!-- Contacto -->
         <TextView

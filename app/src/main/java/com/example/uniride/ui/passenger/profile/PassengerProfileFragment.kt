@@ -25,7 +25,7 @@ class PassengerProfileFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.btnBack.setOnClickListener {
-            requireActivity().finish()
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
 
         // ACÁ SE DEBERÍAN CARGAR DATOS DE PERFIL DESDE DB

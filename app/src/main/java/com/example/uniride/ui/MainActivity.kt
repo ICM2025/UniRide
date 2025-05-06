@@ -25,11 +25,13 @@ class MainActivity : AppCompatActivity() {
     private val passengerOptions = listOf(
         DrawerOption.Profile,
         DrawerOption.Settings,
+        DrawerOption.About,
         DrawerOption.Logout
     )
     private val driverOptions = listOf(
         DrawerOption.Profile,
         DrawerOption.Settings,
+        DrawerOption.About,
         DrawerOption.ManageVehicles,
         DrawerOption.Statistics,
         DrawerOption.Logout
