@@ -8,7 +8,7 @@ class AcercaDeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAcercaDeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        super. onCreate(savedInstanceState)
         binding = ActivityAcercaDeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
