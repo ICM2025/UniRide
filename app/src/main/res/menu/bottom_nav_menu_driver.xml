@@ -7,7 +7,13 @@
     <item
         android:id="@+id/driverTripsFragment"
         android:icon="@drawable/ic_manage_trips"
-        android:title="Gestionar viajes" />
+        android:title="Mis viajes" />
+
+    <item
+        android:id="@+id/tripRequestsFragment"
+        android:title="Solicitudes"
+        android:icon="@drawable/ic_requests" />
+
 
     <item
         android:id="@+id/switchToPassenger"

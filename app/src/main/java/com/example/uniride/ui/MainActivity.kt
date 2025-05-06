@@ -137,7 +137,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.passengerHomeFragment,
                 R.id.passengerRequestsFragment,
                 R.id.driverHomeFragment,
-                R.id.driverTripsFragment -> {
+                R.id.driverTripsFragment,
+                R.id.tripRequestsFragment -> {
                     navController.navigate(item.itemId)
                     true
                 }
@@ -152,6 +153,7 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+
 
         // Cargar  el menú lateral según si es conductor o pasajero
         val options = if (isPassengerMode) passengerOptions else driverOptions

@@ -16,4 +16,9 @@
         android:name="com.example.uniride.ui.driver.trips.DriverTripsFragment"
         android:label="Gestionar viajes"
         tools:layout="@layout/fragment_driver_trips" />
+    <fragment
+        android:id="@+id/tripRequestsFragment"
+        android:name="com.example.uniride.ui.driver.trips.TripRequestsFragment"
+        android:label="fragment_trip_request"
+        tools:layout="@layout/fragment_trip_request" />
 </navigation>
