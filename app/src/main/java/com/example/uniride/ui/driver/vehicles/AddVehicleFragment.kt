@@ -33,6 +33,9 @@ class AddVehicleFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupBrandSpinner()
         setupSaveButton()
+        binding.btnBack.setOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
     }
 
     private fun setupBrandSpinner() {
