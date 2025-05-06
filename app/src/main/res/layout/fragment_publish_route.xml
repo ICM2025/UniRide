@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_color"
+    android:paddingVertical="32dp"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Título -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="Publicar nuevo viaje"
+            android:textColor="@color/text_color"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- Contenedor blanco -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/bg_edittext_rounded"
+            android:elevation="4dp"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Vehículo -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vehículo"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Spinner
+                    android:id="@+id/spinner_car"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_edittext_rounded"
+                    android:padding="8dp" />
+
+            </LinearLayout>
+
+            <!-- Origen -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Origen"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_origin"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_edittext_rounded"
+                android:hint="Escribe el origen"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+            <!-- Destino -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Destino"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_destination"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_edittext_rounded"
+                android:hint="¿A dónde vamos?"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+            <!-- Paradas intermedias -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Paradas intermedias"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/stops_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+            <ImageButton
+                android:id="@+id/btn_add_stop"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_circle"
+                android:padding="4dp"
+                android:src="@drawable/ic_plus"
+                android:contentDescription="Agregar parada"
+                app:tint="@color/main_color" />
+
+
+            <!-- Fecha -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fecha de salida"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_date"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_edittext_rounded"
+                android:focusable="false"
+                android:hint="Selecciona fecha"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+            <!-- Hora -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hora de salida"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_time"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_edittext_rounded"
+                android:focusable="false"
+                android:hint="Selecciona hora"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+            <!-- Cupos disponibles -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cupos disponibles"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_seats"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_edittext_rounded"
+                android:hint="¿Cuántos cupos?"
+                android:inputType="number"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+            <!-- Precio -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Precio"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_price"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_edittext_rounded"
+                android:hint="Valor por pasajero"
+                android:inputType="number"
+                android:paddingHorizontal="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+            <!-- Descripción -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Descripción (opcional)"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_edittext_rounded"
+                android:hint="Ej: Sin música, sin mascotas..."
+                android:inputType="textMultiLine"
+                android:maxLines="5"
+                android:minLines="2"
+                android:padding="16dp"
+                android:textColor="@color/text_color"
+                android:textColorHint="#808080"
+                android:textSize="15sp" />
+
+        </LinearLayout>
+
+        <!-- Botón Continuar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_continue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="32dp"
+            android:backgroundTint="@color/main_color"
+            android:text="Publicar"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:cornerRadius="24dp"
+            app:icon="@drawable/ic_check"
+            app:iconGravity="textEnd"
+            app:iconTint="@android:color/white" />
+
+    </LinearLayout>
+</ScrollView>

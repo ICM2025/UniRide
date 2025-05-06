@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="@drawable/bg_dialog_blur"
+    android:elevation="12dp">
+
+    <ImageView
+        android:id="@+id/iv_check"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:src="@drawable/ic_check_circle"
+        android:contentDescription="Ícono de éxito"
+        android:layout_marginBottom="20dp" />
+
+    <TextView
+        android:id="@+id/tv_success"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="¡Cupo solicitado!"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_color"
+        android:letterSpacing="0.02"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:id="@+id/tv_secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="El conductor ha sido notificado"
+        android:textSize="14sp"
+        android:textColor="@color/text_color"
+        android:alpha="0.8" />
+</LinearLayout>

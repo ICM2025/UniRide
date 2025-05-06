@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/publish_trip_nav_graph"
+    app:startDestination="@id/publishRouteFragment">
+
+    <fragment
+        android:id="@+id/publishRouteFragment"
+        android:name="com.example.uniride.ui.driver.publish.PublishRouteFragment"
+        android:label="Publicar ruta"
+        tools:layout="@layout/fragment_publish_route" >
+        <action
+            android:id="@+id/action_publishRouteFragment_to_addVehicleFragment"
+            app:destination="@id/addVehicleFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/addVehicleFragment"
+        android:name="com.example.uniride.ui.driver.vehicles.AddVehicleFragment"
+        android:label="fragment_add_vehicle"
+        tools:layout="@layout/fragment_add_vehicle" >
+        <action
+            android:id="@+id/action_addVehicleFragment_to_publishRouteFragment"
+            app:destination="@id/publishRouteFragment" />
+    </fragment>
+</navigation>

@@ -1,27 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <!-- Fondo simulado -->
-    <ImageView
-        android:id="@+id/map_background"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:src="@drawable/map" />
+        android:layout_height="match_parent">
 
-    <!-- BottomSheet -->
+    <!-- Reemplazar ImageView por MapFragment -->
+    <fragment
+            android:id="@+id/map"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    <!-- Botón para centrar en la ubicación del usuario -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/myLocartion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|top"
+            android:layout_margin="16dp"
+            android:contentDescription="Mi ubicación"
+            android:src="@android:drawable/ic_menu_mylocation"
+            app:backgroundTint="@android:color/white"
+            app:tint="@color/text_color" />
+
+    <!-- BottomSheet (mantener el mismo) -->
     <LinearLayout
         android:id="@+id/bottom_sheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:layout_marginHorizontal="24dp"
         android:background="@drawable/bg_bottom_sheet"
         android:elevation="8dp"
-        android:layout_marginHorizontal="24dp"
+        android:orientation="vertical"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
         <!-- Barra de agarre -->
@@ -37,16 +48,20 @@
             android:id="@+id/bottom_sheet_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+
+            android:layout_marginBottom="100dp"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:layout_marginBottom="100dp">
+            android:padding="16dp">
 
             <EditText
                 android:id="@+id/et_destination"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="¿A dónde quieres ir?"
                 android:background="@drawable/bg_edittext_rounded"
+                android:clickable="true"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:hint="¿A dónde quieres ir?"
                 android:padding="12dp"
                 android:textColor="@color/text_color"
                 android:textSize="16sp" />
@@ -58,8 +73,8 @@
                 android:layout_marginTop="24dp"
                 android:text="Destinos recientes"
                 android:textColor="@color/text_color"
-                android:textStyle="bold"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"

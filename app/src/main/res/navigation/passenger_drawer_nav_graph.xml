@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/passenger_drawer_nav_graph"
+    app:startDestination="@id/passengerProfileFragment">
+
+    <fragment
+        android:id="@+id/passengerProfileFragment"
+        android:name="com.example.uniride.ui.passenger.profile.PassengerProfileFragment"
+        android:label="fragment_passenger_profile"
+        tools:layout="@layout/fragment_passenger_profile" />
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.uniride.ui.shared.settings.SettingsFragment"
+        android:label="fragment_settings"
+        tools:layout="@layout/fragment_settings" />
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="com.example.uniride.ui.shared.about.AboutFragment"
+        android:label="fragment_about"
+        tools:layout="@layout/fragment_about" />
+</navigation>

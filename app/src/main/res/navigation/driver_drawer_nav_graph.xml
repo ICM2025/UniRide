@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/driver_drawer_nav_graph"
+    app:startDestination="@id/driverProfileFragment">
+a
+    <fragment
+        android:id="@+id/driverProfileFragment"
+        android:name="com.example.uniride.ui.driver.profile.DriverProfileFragment"
+        android:label="fragment_driver_profile"
+        tools:layout="@layout/fragment_driver_profile" />
+    <fragment
+        android:id="@+id/statisticsFragment"
+        android:name="com.example.uniride.ui.driver.statistics.StatisticsFragment"
+        android:label="fragment_statistics"
+        tools:layout="@layout/fragment_statistics" />
+    <fragment
+        android:id="@+id/manageVehiclesFragment"
+        android:name="com.example.uniride.ui.driver.vehicles.ManageVehiclesFragment"
+        android:label="fragment_manage_vehicles"
+        tools:layout="@layout/fragment_manage_vehicles" />
+    <fragment
+        android:id="@+id/settingsFragment2"
+        android:name="com.example.uniride.ui.shared.settings.SettingsFragment"
+        android:label="fragment_settings"
+        tools:layout="@layout/fragment_settings" />
+    <fragment
+        android:id="@+id/aboutFragment2"
+        android:name="com.example.uniride.ui.shared.about.AboutFragment"
+        android:label="fragment_about"
+        tools:layout="@layout/fragment_about" />
+</navigation>
