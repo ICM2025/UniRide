@@ -1,17 +1,16 @@
 package com.example.uniride.ui
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import android.view.Menu
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.GravityCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import com.example.uniride.R
 import com.example.uniride.databinding.ActivityMainBinding
+import com.example.uniride.domain.model.DrawerOption
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -21,6 +20,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navController: NavController
     private val viewModel: MainViewModel by viewModels()
 
+
+    private val passengerOptions = listOf(
+        DrawerOption.Profile,
+        DrawerOption.Settings,
+        DrawerOption.Logout
+    )
+
+    private val driverOptions = listOf(
+        DrawerOption.Profile,
+        DrawerOption.Settings,
+        DrawerOption.ManageVehicles,
+        DrawerOption.Statistics,
+        DrawerOption.Logout
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -29,7 +43,23 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.main_nav_host) as NavHostFragment
         navController = navHostFragment.navController
 
-        // lanza corrutina para observar el modo actual (pasajero o conductor)
+        binding.btnMenu.setOnClickListener {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+
+        // acá van los listeners del drawer
+        binding.navigationView.setNavigationItemSelectedListener { item ->
+            when (item.itemId) {
+                DrawerOption.Profile.id -> { /* navController.navigate(...) */ }
+                DrawerOption.Settings.id -> { /* navController.navigate(...) */ }
+                DrawerOption.ManageVehicles.id -> { /* navController.navigate(...) */ }
+                DrawerOption.Statistics.id -> { /* navController.navigate(...) */ }
+                DrawerOption.Logout.id -> { /* viewModel.logout() */ }
+            }
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+            true
+        }
+
         lifecycleScope.launch {
             viewModel.isPassengerMode.collectLatest { isPassengerMode ->
                 setupNavigation(isPassengerMode)
@@ -45,23 +75,23 @@ class MainActivity : AppCompatActivity() {
         )
         navController.graph = graph
 
-        // Inflar el menú correspondiente
+        // Inflar menú inferior
         binding.bottomNav.menu.clear()
         binding.bottomNav.inflateMenu(
             if (isPassengerMode) R.menu.bottom_nav_menu_passenger
             else R.menu.bottom_nav_menu_driver
         )
 
-        // Seleccionar el fragment inicial según el modo actual
+
+
+        // Seleccionar fragmento inicial
         val startDest = if (isPassengerMode) R.id.passengerHomeFragment else R.id.driverHomeFragment
         navController.navigate(startDest)
 
         binding.bottomNav.selectedItemId = startDest
 
-        // listener que maneja las opciones al hacer click en el menú inferior
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                //si se selecciona alguna de las opciones del menú -> se navega a ese fragment
                 R.id.passengerHomeFragment,
                 R.id.passengerRequestsFragment,
                 R.id.driverHomeFragment,
@@ -69,20 +99,30 @@ class MainActivity : AppCompatActivity() {
                     navController.navigate(item.itemId)
                     true
                 }
-                //cambio a menú  de conductor
                 R.id.switchToDriver -> {
                     viewModel.switchToDriver()
                     true
                 }
-                //cambio a menú  de pasajero
                 R.id.switchToPassenger -> {
                     viewModel.switchToPassenger()
                     true
                 }
-
                 else -> false
             }
         }
+
+        // Cargar  el menú lateral según si es conductor o pasajero
+        val options = if (isPassengerMode) passengerOptions else driverOptions
+        loadDrawerMenu(options)
     }
 
+    //cargar el menú lateral
+    private fun loadDrawerMenu(options: List<DrawerOption>) {
+        val menu = binding.navigationView.menu
+        menu.clear()
+        options.forEach { option ->
+            menu.add(Menu.NONE, option.id, Menu.NONE, option.title)
+                .setIcon(option.iconRes)
+        }
+    }
 }
