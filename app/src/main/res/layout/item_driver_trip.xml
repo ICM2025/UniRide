@@ -1,0 +1,94 @@
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    android:foreground="?attr/selectableItemBackground">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Ruta principal -->
+        <TextView
+            android:id="@+id/tv_route"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="UNAL → Santafé"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="@color/text_color"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/progress_circle" />
+
+        <!-- Fecha y hora -->
+        <TextView
+            android:id="@+id/tv_date_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="12 mayo - 08:00"
+            android:textSize="14sp"
+            android:textColor="@color/text_color"
+            android:alpha="0.8"
+            app:layout_constraintTop_toBottomOf="@id/tv_route"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/progress_circle" />
+
+        <!-- Barra de cupos ocupados -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/progress_circle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="4dp"
+            app:indicatorSize="40dp"
+            app:trackThickness="4dp"
+            app:indicatorInset="4dp"
+            app:trackColor="#ddd"
+            app:indicatorColor="@color/main_color"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Subinfo: pasajeros -->
+        <TextView
+            android:id="@+id/tv_passengers"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="4/5 pasajeros"
+            android:textSize="14sp"
+            android:textColor="@color/text_color"
+            app:layout_constraintTop_toBottomOf="@id/tv_date_time"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Solicitudes pendientes -->
+        <TextView
+            android:id="@+id/tv_pending_requests"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3 pendientes"
+            android:textSize="14sp"
+            android:textColor="@color/main_color"
+            android:layout_marginStart="8dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_date_time"
+            app:layout_constraintStart_toEndOf="@id/tv_passengers" />
+
+        <!-- Icono de vehículo -->
+        <ImageView
+            android:id="@+id/iv_vehicle_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_car"
+            app:tint="@color/text_color"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_passengers"
+            android:layout_marginTop="8dp" />
+
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.cardview.widget.CardView>

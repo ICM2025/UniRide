@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentPassengerRequestsBinding
+import com.example.uniride.domain.adapter.TravelRequestAdapter
 import com.example.uniride.domain.model.TravelOption
 import com.example.uniride.domain.model.TravelRequest
 import com.example.uniride.domain.model.TravelRequestStatus

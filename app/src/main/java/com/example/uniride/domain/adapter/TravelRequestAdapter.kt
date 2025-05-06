@@ -1,4 +1,4 @@
-package com.example.uniride.ui.passenger.requests
+package com.example.uniride.domain.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup

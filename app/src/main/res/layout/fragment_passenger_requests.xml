@@ -12,28 +12,28 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="12dp"
-        android:layout_marginLeft="16dp">
+        android:gravity="center"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp">
 
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_checklist"
-            android:contentDescription="Ícono solicitudes"
-            app:tint="@color/main_color" />
 
         <TextView
             android:id="@+id/tv_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tus solicitudes"
-            android:textSize="20sp"
+            android:text="Mis solicitudes"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="@color/main_color"
-            android:layout_marginStart="12dp" />
+            android:textColor="@color/main_color" />
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/main_color"
+        android:alpha="0.3"
+        android:layout_marginBottom="10dp" />
 
     <View
         android:layout_width="match_parent"
