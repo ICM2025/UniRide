@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -16,6 +17,9 @@ import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentPublishRouteBinding
 import com.example.uniride.domain.model.Vehicle
+import com.google.android.gms.maps.model.LatLng
+import android.content.Context
+import android.content.SharedPreferences
 
 class PublishRouteFragment : Fragment() {
 
@@ -23,6 +27,8 @@ class PublishRouteFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var vehicleList: List<Vehicle>
+    private val stopsList = mutableListOf<String>()
+    private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,6 +40,10 @@ class PublishRouteFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Initialize SharedPreferences
+        sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
+
         setupVehicleSpinner()
         setupContinueButton()
 
@@ -41,8 +51,6 @@ class PublishRouteFragment : Fragment() {
         binding.btnAddStop.setOnClickListener {
             addNewStopField()
         }
-
-
     }
 
     //elegir uno de los vehículos registrados del conductor
@@ -79,6 +87,26 @@ class PublishRouteFragment : Fragment() {
 
     private fun setupContinueButton() {
         binding.btnContinue.setOnClickListener {
+            // Get the origin and destination locations
+            val originAddress = binding.inputOrigin.text.toString()
+            val destinationAddress = binding.inputDestination.text.toString()
+
+            // Clear previous stops
+            stopsList.clear()
+
+            // Get all intermediate stops
+            for (i in 0 until binding.stopsContainer.childCount) {
+                val stopView = binding.stopsContainer.getChildAt(i)
+                val stopEditText = stopView.findViewById<EditText>(R.id.et_stop)
+                val stopText = stopEditText.text.toString().trim()
+                if (stopText.isNotEmpty()) {
+                    stopsList.add(stopText)
+                }
+            }
+
+            // Save route data to SharedPreferences
+            saveRouteData(originAddress, destinationAddress, stopsList)
+
             val activity = requireActivity()
 
             val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
@@ -102,6 +130,22 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
+    private fun saveRouteData(origin: String, destination: String, stops: List<String>) {
+        val editor = sharedPreferences.edit()
+        editor.putString("ROUTE_ORIGIN", origin)
+        editor.putString("ROUTE_DESTINATION", destination)
+        editor.putInt("ROUTE_STOPS_COUNT", stops.size)
+
+        // Save each stop
+        stops.forEachIndexed { index, stop ->
+            editor.putString("ROUTE_STOP_$index", stop)
+        }
+
+        // Set flag to indicate a route has been published
+        editor.putBoolean("HAS_PUBLISHED_ROUTE", true)
+
+        editor.apply()
+    }
 
     //simulando que tiene carros registrados
     private fun loadVehiclesForUser(): List<Vehicle> {
@@ -116,7 +160,6 @@ class PublishRouteFragment : Fragment() {
         addNewStopField() // primer campo por defecto
     }
 
-
     private fun addNewStopField() {
         val stopView =
             layoutInflater.inflate(R.layout.item_stop_field, binding.stopsContainer, false)
@@ -130,7 +173,6 @@ class PublishRouteFragment : Fragment() {
 
         binding.stopsContainer.addView(stopView)
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()
