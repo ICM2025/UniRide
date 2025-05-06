@@ -1,10 +1,14 @@
 package com.example.uniride.ui.passenger.search
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
+import android.location.Location
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -12,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -20,8 +25,8 @@ import com.example.uniride.R
 import com.example.uniride.databinding.FragmentSearchInputBinding
 import com.example.uniride.domain.adapter.PlaceAdapter
 import com.example.uniride.domain.model.Place
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import com.example.uniride.utility.Config_permission
+import com.google.android.gms.maps.GoogleMap
 import java.io.IOException
 import java.util.Locale
 
@@ -31,8 +36,9 @@ class SearchInputFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var adapter: PlaceAdapter
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var configPermission: Config_permission
     private var activeField: EditTextField = EditTextField.DESTINATION
+    private var currentLocation: Location? = null
 
     enum class EditTextField {
         ORIGIN, DESTINATION
@@ -46,6 +52,20 @@ class SearchInputFragment : Fragment() {
         Place("Terminal Salitre", "Calle 22 #68, Bogotá")
     )
 
+    // ActivityResultLauncher para la búsqueda por voz
+    private val speechRecognizerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0) ?: ""
+            when (activeField) {
+                EditTextField.ORIGIN -> binding.etOrigin.setText(spokenText)
+                EditTextField.DESTINATION -> binding.etDestination.setText(spokenText)
+            }
+            updateSearchButtonVisibility()
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -57,11 +77,20 @@ class SearchInputFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        // Inicializar Config_permission con un callback para cuando se actualice la ubicación
+        configPermission = Config_permission(
+            fragment = this,
+            mapReadyCallback = { googleMap: GoogleMap -> /* No necesitamos el mapa aquí */ },
+            locationUpdateCallback = { location: Location ->
+                // Guardar la ubicación actual pero no la mostramos automáticamente
+                currentLocation = location
+            }
+        )
+        configPermission.initialize()
 
         adapter = PlaceAdapter(placesList) { selected ->
             if (selected.name == "Mi ubicación actual") {
-                getCurrentLocation()
+                handleMyLocationSelection()
             } else {
                 fillSelectedPlace(selected)
             }
@@ -86,69 +115,63 @@ class SearchInputFragment : Fragment() {
         updateSearchButtonVisibility()
     }
 
-    private fun getCurrentLocation() {
-        if (ActivityCompat.checkSelfPermission(
+    private fun handleMyLocationSelection() {
+        // Verifica si ya tenemos la ubicación almacenada
+        val location = currentLocation ?: configPermission.getLastKnownLocation()
+
+        if (location != null) {
+            useLocationForAddress(location)
+        } else {
+            // Si no tenemos ubicación, solicitamos acceso y actualizaciones
+            configPermission.checkLocationPermissions()
+            Toast.makeText(
                 requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-            return
-        }
+                "Obteniendo tu ubicación...",
+                Toast.LENGTH_SHORT
+            ).show()
 
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location ->
-                if (location != null) {
-                    try {
-                        val geocoder = Geocoder(requireContext(), Locale.getDefault())
-                        val addresses: List<Address>? = geocoder.getFromLocation(
-                            location.latitude,
-                            location.longitude,
-                            1
-                        )
-
-                        if (!addresses.isNullOrEmpty()) {
-                            val address = addresses[0]
-                            val addressText = address.getAddressLine(0) ?: "Mi ubicación actual"
-
-                            when (activeField) {
-                                EditTextField.ORIGIN -> binding.etOrigin.setText(addressText)
-                                EditTextField.DESTINATION -> binding.etDestination.setText(addressText)
-                            }
-                            updateSearchButtonVisibility()
-                        }
-                    } catch (e: IOException) {
-                        Toast.makeText(
-                            requireContext(),
-                            "No se pudo obtener la dirección",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+            // Esperar un momento y luego intentar nuevamente
+            view?.postDelayed({
+                val updatedLocation = configPermission.getLastKnownLocation()
+                if (updatedLocation != null) {
+                    useLocationForAddress(updatedLocation)
                 } else {
                     Toast.makeText(
                         requireContext(),
-                        "No se pudo obtener la ubicación",
+                        "No se pudo obtener la ubicación. Intenta nuevamente.",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+            }, 2000) // Esperar 2 segundos
+        }
+    }
+
+    private fun useLocationForAddress(location: Location) {
+        try {
+            val geocoder = Geocoder(requireContext(), Locale.getDefault())
+            val addresses: List<Address>? = geocoder.getFromLocation(
+                location.latitude,
+                location.longitude,
+                1
+            )
+
+            if (!addresses.isNullOrEmpty()) {
+                val address = addresses[0]
+                val addressText = address.getAddressLine(0) ?: "Mi ubicación actual"
+
+                when (activeField) {
+                    EditTextField.ORIGIN -> binding.etOrigin.setText(addressText)
+                    EditTextField.DESTINATION -> binding.etDestination.setText(addressText)
+                }
+                updateSearchButtonVisibility()
             }
-            .addOnFailureListener {
-                Toast.makeText(
-                    requireContext(),
-                    "Error al obtener la ubicación",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+        } catch (e: IOException) {
+            Toast.makeText(
+                requireContext(),
+                "No se pudo obtener la dirección",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun initListeners() {
@@ -183,6 +206,52 @@ class SearchInputFragment : Fragment() {
                 activeField = EditTextField.DESTINATION
             }
         }
+
+        // Configurar botones de búsqueda por voz
+        binding.btnVoiceOrigin.setOnClickListener {
+            activeField = EditTextField.ORIGIN
+            startVoiceRecognition()
+        }
+
+        binding.btnVoiceDestination.setOnClickListener {
+            activeField = EditTextField.DESTINATION
+            startVoiceRecognition()
+        }
+    }
+
+    // Inicia la actividad de reconocimiento de voz
+    private fun startVoiceRecognition() {
+        if (ActivityCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                requireActivity(),
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                VOICE_PERMISSION_REQUEST_CODE
+            )
+            return
+        }
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Habla ahora...")
+        }
+
+        try {
+            speechRecognizerLauncher.launch(intent)
+        } catch (e: Exception) {
+            Toast.makeText(
+                requireContext(),
+                "Tu dispositivo no soporta reconocimiento de voz",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     //para verificar si los cuadros te texto están vacíos. necesario para saber si mostrar o no botón
@@ -216,17 +285,29 @@ class SearchInputFragment : Fragment() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getCurrentLocation()
-            } else {
-                Toast.makeText(
-                    requireContext(),
-                    "Permiso de ubicación denegado",
-                    Toast.LENGTH_SHORT
-                ).show()
+        when (requestCode) {
+            VOICE_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startVoiceRecognition()
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "Permiso de micrófono denegado",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        configPermission.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        configPermission.onPause()
     }
 
     override fun onDestroyView() {
@@ -235,6 +316,6 @@ class SearchInputFragment : Fragment() {
     }
 
     companion object {
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 100
+        private const val VOICE_PERMISSION_REQUEST_CODE = 101
     }
 }
