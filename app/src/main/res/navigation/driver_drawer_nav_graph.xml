@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/driver_drawer_nav_graph"
     app:startDestination="@id/driverProfileFragment">
-a
+
     <fragment
         android:id="@+id/driverProfileFragment"
         android:name="com.example.uniride.ui.driver.profile.DriverProfileFragment"
@@ -19,7 +19,14 @@ a
         android:id="@+id/manageVehiclesFragment"
         android:name="com.example.uniride.ui.driver.vehicles.ManageVehiclesFragment"
         android:label="fragment_manage_vehicles"
-        tools:layout="@layout/fragment_manage_vehicles" />
+        tools:layout="@layout/fragment_manage_vehicles" >
+        <action
+            android:id="@+id/action_manageVehiclesFragment_to_addVehicleFragment3"
+            app:destination="@id/addVehicleFragment3" />
+        <action
+            android:id="@+id/action_manageVehiclesFragment_to_editVehicleFragment"
+            app:destination="@id/editVehicleFragment" />
+    </fragment>
     <fragment
         android:id="@+id/settingsFragment2"
         android:name="com.example.uniride.ui.shared.settings.SettingsFragment"
@@ -30,4 +37,13 @@ a
         android:name="com.example.uniride.ui.shared.about.AboutFragment"
         android:label="fragment_about"
         tools:layout="@layout/fragment_about" />
+    <fragment
+        android:id="@+id/editVehicleFragment"
+        android:name="com.example.uniride.ui.driver.vehicles.EditVehicleFragment"
+        android:label="fragment_edit_vehicle"
+        tools:layout="@layout/fragment_edit_vehicle" />
+    <fragment
+        android:id="@+id/addVehicleFragment3"
+        android:name="com.example.uniride.ui.driver.vehicles.AddVehicleFragment"
+        android:label="AddVehicleFragment" />
 </navigation>
