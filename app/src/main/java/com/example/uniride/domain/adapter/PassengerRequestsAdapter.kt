@@ -12,7 +12,8 @@ import com.example.uniride.domain.model.PassengerRequestStatus
 class PassengerRequestsAdapter(
     private val items: List<PassengerRequest>,
     private val onAccept: (PassengerRequest) -> Unit,
-    private val onReject: (PassengerRequest) -> Unit
+    private val onReject: (PassengerRequest) -> Unit,
+    private val onClick: (PassengerRequest) -> Unit
 ) : RecyclerView.Adapter<PassengerRequestsAdapter.RequestViewHolder>() {
 
     inner class RequestViewHolder(val binding: ItemTripRequestDriverBinding) :
@@ -48,6 +49,10 @@ class PassengerRequestsAdapter(
                 actionButtons.visibility = View.GONE
             }
         }
+        holder.itemView.setOnClickListener {
+            onClick(item)
+        }
+
     }
 
     override fun getItemCount(): Int = items.size

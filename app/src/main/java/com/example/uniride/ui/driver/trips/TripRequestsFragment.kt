@@ -45,36 +45,75 @@ class TripRequestsFragment : Fragment() {
                 passengerName = "Camila Torres",
                 destination = "Zona T",
                 status = PassengerRequestStatus.Pending,
-                profileDrawableRes = R.id.iv_profile
+                profileImg = R.drawable.ic_profile,
+                university = "Universidad Nacional",
+                email = "camila.torres@email.com",
+                tripCount = 12,
+                rating = 4.8,
+                reviewsCount = 24
             ),
             PassengerRequest(
                 passengerName = "Luis Martínez",
                 destination = "Suba",
                 status = PassengerRequestStatus.Accepted,
-                profileDrawableRes = R.id.iv_profile
+                profileImg = R.drawable.ic_profile,
+                university = "Universidad de los Andes",
+                email = "luis.martinez@email.com",
+                tripCount = 18,
+                rating = 4.6,
+                reviewsCount = 31
             ),
             PassengerRequest(
                 passengerName = "Andrea Gómez",
                 destination = "Titan Plaza",
                 status = PassengerRequestStatus.Rejected,
-                profileDrawableRes = R.id.iv_profile
+                profileImg = R.drawable.ic_profile,
+                university = "Pontificia Universidad Javeriana",
+                email = "andrea.gomez@email.com",
+                tripCount = 7,
+                rating = 4.9,
+                reviewsCount = 15
             )
         )
+
+
 
         adapter = PassengerRequestsAdapter(
             items = requests,
             onAccept = { req ->
                 Toast.makeText(requireContext(), "Aceptaste a ${req.passengerName}", Toast.LENGTH_SHORT).show()
-                // Lógica real para aceptar
             },
             onReject = { req ->
                 Toast.makeText(requireContext(), "Rechazaste a ${req.passengerName}", Toast.LENGTH_SHORT).show()
-                // Lógica real para rechazar
-            }
+            },
+            onClick = { req -> showPassengerDetails(req) }
         )
-
+        // se muestra el bottom sheet
         binding.rvPassengerRequests.adapter = adapter
     }
+
+    private fun showPassengerDetails(request: PassengerRequest) {
+        val details = PassengerRequest(
+            passengerName = request.passengerName,
+            university = request.university,
+            email = request.email,
+            profileImg = request.profileImg,
+            tripCount = request.tripCount,
+            rating = request.rating,
+            reviewsCount = request.reviewsCount,
+            destination = request.destination,
+            status = request.status
+        )
+
+
+
+        PassengerRequestDetailBottomSheet(details) {
+            Toast.makeText(requireContext(), "Abrir chat con ${details.passengerName}", Toast.LENGTH_SHORT).show()
+            // acá se lanza actividad para el chat
+        }.show(parentFragmentManager, "PassengerRequestDetail")
+    }
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()

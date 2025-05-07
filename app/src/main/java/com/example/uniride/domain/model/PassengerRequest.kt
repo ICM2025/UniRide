@@ -2,7 +2,12 @@ package com.example.uniride.domain.model
 
 data class PassengerRequest(
     val passengerName: String,
-    val profileDrawableRes: Int,
     val destination: String,
-    val status: PassengerRequestStatus
+    val status: PassengerRequestStatus,
+    val profileImg: Int,
+    val university: String,
+    val email: String,
+    val tripCount: Int,
+    val rating: Double,
+    val reviewsCount: Int
 )
