@@ -1,5 +1,6 @@
 package com.example.uniride.ui.driver.publish
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
 import android.os.Handler
@@ -125,6 +126,9 @@ class PublishRouteFragment : Fragment() {
 
             Handler(Looper.getMainLooper()).postDelayed({
                 dialog.dismiss()
+
+                // Set result to notify the Driver Home that a route was published
+                activity.setResult(Activity.RESULT_OK)
                 activity.finish()
             }, 1500)
         }

@@ -9,4 +9,9 @@ class PublishTripFlowActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_publish_trip_flow)
     }
+
+    override fun onBackPressed() {
+        setResult(RESULT_CANCELED)
+        super.onBackPressed()
+    }
 }

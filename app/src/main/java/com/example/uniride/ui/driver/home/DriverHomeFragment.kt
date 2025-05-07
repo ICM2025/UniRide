@@ -10,6 +10,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverHomeBinding
@@ -32,6 +34,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import android.content.pm.PackageManager
 import android.os.StrictMode
+import android.util.Log
 
 class DriverHomeFragment : Fragment(), OnMapReadyCallback {
 
@@ -51,6 +54,15 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
     private var originLocation: LatLng? = null
     private var destinationLocation: LatLng? = null
     private var stopLocations: MutableList<LatLng> = mutableListOf()
+
+    // Activity result launcher for publish trip flow
+    private lateinit var publishTripLauncher: ActivityResultLauncher<Intent>
+
+    // Flag to track if route is displayed
+    private var isRouteDisplayed = false
+
+    // NUEVA VARIABLE: Flag para prevenir recarga de mapa por ubicación
+    private var preventLocationCameraUpdate = false
 
     // API Key
     private val DIRECTIONS_API_KEY: String by lazy {
@@ -78,6 +90,9 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
         // Initialize geocoder
         geocoder = Geocoder(requireContext())
 
+        // Register the activity result launcher
+        registerPublishTripLauncher()
+
         // Permitir operaciones de red en el hilo principal (solo para demo)
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -86,14 +101,18 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
         locationPermissionManager = Config_permission(
             fragment = this,
             mapReadyCallback = { googleMap ->
-                // Any additional map customization specific to driver can go here
-                if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
-                    loadRouteAndDisplay()
-                }
+                // No hacemos nada adicional aquí, gestionamos todo en onMapReady
             },
             locationUpdateCallback = { location ->
-                // Any specific driver location update logic can go here
-                onLocationUpdated(location)
+                // MODIFICADO: Solo actualizar la cámara si no hay ruta activa
+                if (!preventLocationCameraUpdate) {
+                    onLocationUpdated(location)
+                }
+
+                // Comprobar si necesitamos volver a mostrar la ruta
+                if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && !isRouteDisplayed) {
+                    loadRouteAndDisplay()
+                }
             }
         )
 
@@ -107,7 +126,31 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
         // Set up button click listener
         binding.btnPublishTrip.setOnClickListener {
             val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
-            startActivity(intent)
+            publishTripLauncher.launch(intent)
+        }
+    }
+
+    private fun registerPublishTripLauncher() {
+        publishTripLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                // Route was published, immediately load and display it
+                loadRouteAndDisplay()
+
+                // Update UI if needed to reflect that a route is active
+                updateUIForActiveRoute()
+            }
+        }
+    }
+
+    private fun updateUIForActiveRoute() {
+        // Update the UI to show that there's an active route
+        // For example, change the "Publish Trip" button to "Edit Trip" or "Cancel Trip"
+        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+            binding.btnPublishTrip.text = "Editar Viaje"
+            // Adicionalmente, activamos el flag para prevenir actualizaciones de cámara por ubicación
+            preventLocationCameraUpdate = true
         }
     }
 
@@ -115,12 +158,29 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
         // Save map reference
         mMap = googleMap
 
+        // Set map settings to ensure route display persists - similar to SearchResultsFragment
+        googleMap.uiSettings.apply {
+            isZoomControlsEnabled = true
+            isMapToolbarEnabled = true
+            isZoomGesturesEnabled = true
+            isScrollGesturesEnabled = true
+            isRotateGesturesEnabled = true
+        }
+
+        // MODIFICADO: No configuramos listeners que puedan borrar el mapa
+        googleMap.setOnCameraMoveStartedListener(null)
+        googleMap.setOnCameraIdleListener(null)
+
         // Delegate to the location permission manager
         locationPermissionManager.onMapReady(googleMap)
 
         // Check if there's a route to display
         if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
-            loadRouteAndDisplay()
+            // MODIFICADO: Cargar la ruta después de un pequeño retraso para asegurar que el mapa esté listo
+            view?.postDelayed({
+                loadRouteAndDisplay()
+                updateUIForActiveRoute()
+            }, 500)
         }
     }
 
@@ -129,8 +189,18 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
         val destinationAddress = sharedPreferences.getString("ROUTE_DESTINATION", null)
         val stopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
 
-        // Clear previous stops
+        // If map is not ready yet, we'll try again later
+        if (mMap == null) {
+            return
+        }
+
+        // Clear previous stops and route
         stopLocations.clear()
+        routePolyline?.remove()
+        mMap?.clear()
+
+        // Reset the displayed flag
+        isRouteDisplayed = false
 
         // If we have origin and destination
         if (!originAddress.isNullOrEmpty() && !destinationAddress.isNullOrEmpty()) {
@@ -152,6 +222,10 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
             // Display route if we have origin and destination
             if (originLocation != null && destinationLocation != null) {
                 drawRoute(originLocation!!, destinationLocation!!, stopLocations)
+                // MODIFICADO: Activar el flag para prevenir que las actualizaciones de ubicación muevan la cámara
+                preventLocationCameraUpdate = true
+                // Set the flag that route is displayed
+                isRouteDisplayed = true
             } else {
                 Toast.makeText(
                     requireContext(),
@@ -163,10 +237,15 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun findLocation(address: String): LatLng? {
-        val addresses = geocoder.getFromLocationName(address, 2)
-        if (addresses != null && addresses.isNotEmpty()) {
-            val addr = addresses[0]
-            return LatLng(addr.latitude, addr.longitude)
+        try {
+            val addresses = geocoder.getFromLocationName(address, 2)
+            if (addresses != null && addresses.isNotEmpty()) {
+                val addr = addresses[0]
+                return LatLng(addr.latitude, addr.longitude)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(requireContext(), "Error al encontrar ubicación: ${e.message}", Toast.LENGTH_SHORT).show()
         }
         return null
     }
@@ -175,15 +254,18 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
         try {
             val path = getDirectionsData(origin, destination, stops)
 
+            // Remove previous polyline if exists
             routePolyline?.remove()
 
             if (path.isNotEmpty()) {
+                // Crear la polilínea de manera similar a SearchResultsFragment
                 val polylineOptions = PolylineOptions()
                     .addAll(path)
                     .width(12f)
                     .color(Color.BLUE)
                     .geodesic(true)
 
+                // Guardar referencia de la polilínea para poder acceder a ella más tarde
                 routePolyline = mMap?.addPolyline(polylineOptions)
 
                 // Add markers
@@ -208,19 +290,33 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
                     )
                 }
 
-                // Create bounds for camera
+                // Create bounds for camera similar to SearchResultsFragment
                 val builder = LatLngBounds.Builder()
                 builder.include(origin)
                 builder.include(destination)
                 stops.forEach { builder.include(it) }
-                val bounds = builder.build()
 
-                val padding = 100
-                val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
-                mMap?.animateCamera(cameraUpdate)
+                try {
+                    val bounds = builder.build()
+                    val padding = 100
+                    val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
+                    // MODIFICADO: Usar moveCamera en lugar de animateCamera para evitar problemas con animaciones
+                    mMap?.moveCamera(cameraUpdate)
+                } catch (e: Exception) {
+                    // Fallback in case bounds calculation fails
+                    mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(origin, 12f))
+                    e.printStackTrace()
+                }
+
+                // Marcar que la ruta se visualiza correctamente
+                isRouteDisplayed = true
+
+                // AÑADIDO: Importante - prevenir que las actualizaciones de ubicación muevan la cámara
+                preventLocationCameraUpdate = true
             } else {
                 Toast.makeText(requireContext(), "No se pudo trazar la ruta", Toast.LENGTH_SHORT)
                     .show()
+                isRouteDisplayed = false
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -229,6 +325,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
                 "Error al obtener la ruta: ${e.message}",
                 Toast.LENGTH_SHORT
             ).show()
+            isRouteDisplayed = false
         }
     }
 
@@ -239,7 +336,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
     ): List<LatLng> {
         val path = ArrayList<LatLng>()
         try {
-            // Build URL for Google Directions API
+            // Build URL for Google Directions API - similar to SearchResultsFragment approach
             var urlString = "https://maps.googleapis.com/maps/api/directions/json?" +
                     "origin=${origin.latitude},${origin.longitude}" +
                     "&destination=${destination.latitude},${destination.longitude}" +
@@ -259,6 +356,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
             val url = URL(urlString)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
 
             val reader = BufferedReader(InputStreamReader(connection.inputStream))
             val response = StringBuilder()
@@ -289,9 +388,12 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
                         }
                     }
                 }
+            } else {
+                Log.e("DirectionsAPI", "Status no OK: $status")
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            Log.e("DirectionsAPI", "Error obteniendo ruta: ${e.message}")
         }
         return path
     }
@@ -337,27 +439,59 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback {
 
     // Handle specific driver actions when location is updated
     private fun onLocationUpdated(location: Location) {
-        // Any additional logic specific to driver view when location changes
-        // For example, update nearest pickup points, etc.
+        // MODIFICADO: No hacer nada si estamos previniendo actualizaciones de cámara por ubicación
+        if (preventLocationCameraUpdate) {
+            return
+        }
+
+        // Si no hay ruta activa o no se está mostrando, permitir que locationPermissionManager actualice la cámara
+        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && !isRouteDisplayed && mMap != null) {
+            loadRouteAndDisplay()
+        }
     }
 
     override fun onResume() {
         super.onResume()
         locationPermissionManager.onResume()
 
-        // Check if there's a route to display (for when returning from publishing a route)
-        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && mMap != null) {
-            loadRouteAndDisplay()
+        // Update the UI if there's an active route
+        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+            updateUIForActiveRoute()
+            // Make sure route is displayed when fragment resumes
+            if (!isRouteDisplayed && mMap != null) {
+                // MODIFICADO: Agregar un pequeño retraso para asegurar que el mapa esté listo
+                view?.postDelayed({
+                    loadRouteAndDisplay()
+                }, 300)
+            }
         }
     }
 
     override fun onPause() {
         super.onPause()
         locationPermissionManager.onPause()
+        // MODIFICADO: No borrar la ruta al pausar el fragmento
+        // No resetear isRouteDisplayed ni preventLocationCameraUpdate
+    }
+
+    // AÑADIDO: Método para manejar cuando se vuelve a este fragmento desde otro
+    override fun onStart() {
+        super.onStart()
+        // Si hay una ruta publicada, asegurarse de que se muestre correctamente
+        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+            preventLocationCameraUpdate = true
+            if (mMap != null && !isRouteDisplayed) {
+                view?.postDelayed({
+                    loadRouteAndDisplay()
+                }, 300)
+            }
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        // No eliminar la polilínea ni restablecer isRouteDisplayed aquí
+        // Esto es crucial para que la ruta se mantenga al volver al fragmento
     }
 }
