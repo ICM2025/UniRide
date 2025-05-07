@@ -8,7 +8,10 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
+import com.example.uniride.connection.SupabaseInstance
 import com.example.uniride.databinding.FragmentDriverProfileBinding
+import io.github.jan.supabase.auth.auth
+import kotlinx.serialization.json.jsonPrimitive
 
 class DriverProfileFragment : Fragment() {
 
@@ -40,6 +43,15 @@ class DriverProfileFragment : Fragment() {
 
         binding.btnChangePicture.setOnClickListener {
             Toast.makeText(requireContext(), "Cambiar foto aún no implementado", Toast.LENGTH_SHORT).show()
+        }
+        //Se carga el usuario
+        val user = SupabaseInstance.client.auth.currentUserOrNull()
+        //Se imprime el nombre y el email del usuario
+        user?.let {
+            val email = it.email
+            val username = it.userMetadata?.get("username")?.jsonPrimitive?.content
+            binding.tvName.text = username
+            binding.tvEmail.text = email
         }
     }
 

@@ -1,6 +1,8 @@
 package com.example.uniride.ui
 
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.view.Menu
 import androidx.activity.viewModels
@@ -16,10 +18,62 @@ import com.example.uniride.ui.driver.drawer.DriverDrawerFlowActivity
 import com.example.uniride.ui.passenger.drawer.PassengerDrawerFlowActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import android.content.Context
+import android.content.SharedPreferences
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.util.Log
+import android.widget.Toast
+import com.example.uniride.connection.SupabaseInstance
+import com.example.uniride.ui.auth.AuthActivity
+import io.github.jan.supabase.auth.auth
+import kotlin.math.sqrt
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
+    private lateinit var sharedPreferences: SharedPreferences
+    //variables del sensor acelerómetro
+    private lateinit var sensorManager: SensorManager
+    private var accelerometer: Sensor? = null
+    private var lastShakeTime: Long = 0
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent?) {
+            val now = System.currentTimeMillis()
+            // evita múltiples llamadas seguidas
+            if (event == null || (now - lastShakeTime) < 1000) return
+
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+
+            val acceleration = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
+
+            if (acceleration > 12) {
+                lastShakeTime = now
+
+                //Se revisa si es pasajero o no
+                val isPassenger = viewModel.isPassengerMode.value
+                val destination = if (isPassenger)
+                    R.id.passengerProfileFragment
+                else
+                    R.id.driverProfileFragment
+                val activityClass = if (isPassenger)
+                    PassengerDrawerFlowActivity::class.java
+                else
+                    DriverDrawerFlowActivity::class.java
+                Log.e("acele","Entrando al perfil ${if (isPassenger) "pasajero" else "conductor"}")
+                val intent = Intent(this@MainActivity, activityClass)
+                intent.putExtra("destination", destination)
+                startActivity(intent)
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+
     private val viewModel: MainViewModel by viewModels()
     //para los menus laterales
     private val passengerOptions = listOf(
@@ -51,6 +105,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         setupDrawerItemClicks()
+
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        accelerometer?.let {
+            sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+
 
         lifecycleScope.launch {
             viewModel.isPassengerMode.collectLatest { isPassengerMode ->
@@ -95,7 +157,11 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 DrawerOption.Logout.id -> {
-                    //ACÁ HACER EL LOGOUT
+                    lifecycleScope.launch{
+                        SupabaseInstance.client.auth.signOut()
+                    }
+                    startActivity(Intent(this, AuthActivity::class.java))
+                    finish()
                     return@setNavigationItemSelectedListener true
                 }
 
@@ -169,4 +235,10 @@ class MainActivity : AppCompatActivity() {
                 .setIcon(option.iconRes)
         }
     }
+    override fun onDestroy() {
+        super.onDestroy()
+        //dejar de escuchar cambios en el acelerómetro
+        sensorManager.unregisterListener(sensorListener)
+    }
+
 }
