@@ -18,11 +18,18 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+
 
 class RegisterFragment : Fragment() {
 
     private var _binding: FragmentRegisterBinding? = null
     private val binding get() = _binding!!
+    private lateinit var securePrefs: SharedPreferences
+    private lateinit var masterKey: MasterKey
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,6 +41,21 @@ class RegisterFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        context?.let {
+            masterKey = MasterKey.Builder(it)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+
+            securePrefs = EncryptedSharedPreferences.create(
+                it,
+                "secure_user_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
+
 
         binding.loginButton.setOnClickListener {
             findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
@@ -49,16 +71,21 @@ class RegisterFragment : Fragment() {
             if (email.isEmpty()) {
                 binding.email.error = "El correo es obligatorio"
                 valid = false
-            } else {
+            } else if(!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){
+                binding.email.error = "El correo es no es válido"
+                valid = false
+            }else
                 binding.email.error = null
-            }
 
             if (password.isEmpty()) {
                 binding.password.error = "La contraseña es obligatoria"
                 valid = false
-            } else {
+            } else if(password.length < 6) {
+                binding.password.error = "La contraseña debe tener al menos 6 caracteres"
+                valid = false
+            }else
                 binding.password.error = null
-            }
+
 
             if(username.isEmpty()){
                 binding.user.error = "El usuario es obligatorio"
@@ -96,6 +123,11 @@ class RegisterFragment : Fragment() {
                     put("username", username)
                 }
             }
+            securePrefs.edit()
+                .putString("user_email", email1)
+                .putString("user_password", password1)
+                .apply()
+
             Log.i("Register", "Se registro correctamente")
             //Se dirige a la actividad home de la app
             val intent = Intent(requireContext(), MainActivity::class.java)
