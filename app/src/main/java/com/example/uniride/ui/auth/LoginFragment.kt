@@ -20,9 +20,11 @@ import com.example.uniride.databinding.FragmentLoginBinding
 import com.example.uniride.ui.MainActivity
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
-import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+
 
 
 class LoginFragment : Fragment() {
@@ -31,7 +33,8 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: PromptInfo
-    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var securePrefs: SharedPreferences
+    private lateinit var masterKey: MasterKey
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -43,19 +46,42 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        //Se inicializa EncryptedSharedPreferences
+        context?.let {
+            masterKey = MasterKey.Builder(it)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
 
-        //Se obtiene las preferencias compartidas en donde estara el token de la sesión del usuario
-        sharedPreferences = requireActivity().getSharedPreferences("user_prefs", 0)
-
-        //Se configura el prompt para la autenticación biométrica
-        setupBiometricPrompt()
-
-        // Si hay tokens guardados, permite el acceso por huella
-        val savedAccessToken = sharedPreferences.getString("access_token", null)
-        val savedRefreshToken = sharedPreferences.getString("refresh_token", null)
-        if (savedAccessToken != null && savedRefreshToken != null) {
-            biometricPrompt.authenticate(promptInfo)
+            securePrefs = EncryptedSharedPreferences.create(
+                it,
+                "secure_user_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
         }
+        // Verificar si las credenciales están guardadas
+        val savedEmail = securePrefs.getString("user_email", null)
+        val savedPassword = securePrefs.getString("user_password", null)
+
+        if (!savedEmail.isNullOrEmpty() && !savedPassword.isNullOrEmpty()) {
+            // Si las credenciales están guardadas, configura y muestra la autenticación biométrica
+            setupBiometricPrompt()
+
+            // Configura y muestra el prompt para la autenticación biométrica
+            promptInfo = PromptInfo.Builder()
+                .setTitle("Autenticación biométrica")
+                .setSubtitle("Inicia sesión usando tu huella")
+                .setNegativeButtonText("Cancelar")
+                .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                .build()
+
+            biometricPrompt.authenticate(promptInfo)
+        } else {
+            // Si no hay credenciales guardadas, no mostrar el prompt
+            Log.d("LoginFragment", "No hay credenciales guardadas")
+        }
+
         //Va a al fragmento de registrar usuario
         binding.registerButton.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
@@ -98,7 +124,16 @@ class LoginFragment : Fragment() {
         biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
-                restoreSession()
+                val savedEmail = securePrefs.getString("user_email", null)
+                val savedPassword = securePrefs.getString("user_password", null)
+
+                if (!savedEmail.isNullOrEmpty() && !savedPassword.isNullOrEmpty()) {
+                    lifecycleScope.launch {
+                        loginUser(savedEmail, savedPassword)
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "No se encontraron credenciales guardadas", Toast.LENGTH_SHORT).show()
+                }
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -111,46 +146,6 @@ class LoginFragment : Fragment() {
                 Log.e("Biometric", "Autenticación biométrica fallida")
             }
         })
-        //mostrar el mensaje para autenticarse con huella digitial
-        promptInfo = PromptInfo.Builder()
-            .setTitle("Autenticación biométrica")
-            .setSubtitle("Inicia sesión usando tu huella")
-            .setNegativeButtonText("Cancelar")
-            .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK)
-            .build()
-    }
-    private fun restoreSession() {
-        val accessToken = sharedPreferences.getString("access_token", null)
-        val refreshToken = sharedPreferences.getString("refresh_token", null)
-
-        if (accessToken != null && refreshToken != null) {
-            lifecycleScope.launch {
-                try {
-                    // Creamos e importamos la sesión manualmente
-                    SupabaseInstance.client.auth.importSession(
-                        UserSession(
-                            accessToken = accessToken,
-                            refreshToken = refreshToken,
-                            expiresIn = 3600, // Duración estimada del access_token en segundos
-                            tokenType = "Bearer",
-                            user = null
-                        )
-                    )
-
-                    // Refrescar si ya expiró
-                    SupabaseInstance.client.auth.refreshCurrentSession()
-
-                    Log.i("Biometric", "Sesión importada y verificada correctamente")
-                    startActivity(Intent(requireContext(), MainActivity::class.java))
-                    requireActivity().finish()
-                } catch (e: Exception) {
-                    Log.e("Biometric", "Error al restaurar sesión: ${e.localizedMessage}")
-                    Toast.makeText(requireContext(), "No se pudo restaurar la sesión", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            Toast.makeText(requireContext(), "No hay sesión guardada", Toast.LENGTH_SHORT).show()
-        }
     }
 
 
@@ -169,18 +164,15 @@ class LoginFragment : Fragment() {
                 this.password = password
             }
 
-            val session = SupabaseInstance.client.auth.currentSessionOrNull()
-            session?.let {
-                sharedPreferences.edit()
-                    .putString("user_email", email)
-                    .putString("access_token", it.accessToken)
-                    .putString("refresh_token", it.refreshToken)
-                    .apply()
-            }
+            securePrefs.edit()
+                .putString("user_email", email)
+                .putString("user_password", password)
+                .apply()
 
             Log.i("Login", "Se inició sesión correctamente")
             startActivity(Intent(requireContext(), MainActivity::class.java))
             requireActivity().finish()
+
         } catch (e: Exception) {
             Log.e("Login", "Error al iniciar sesión: ${e.localizedMessage}")
             Toast.makeText(requireContext(), "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()

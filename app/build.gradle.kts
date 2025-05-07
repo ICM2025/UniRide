@@ -81,4 +81,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
     implementation("io.ktor:ktor-client-android:3.1.2")
+
+    //sharedPreferences seguro para guardar credenciales
+    implementation ("androidx.security:security-crypto:1.1.0-alpha06")
 }
