@@ -1,11 +1,10 @@
 package com.example.uniride
 
-import Config_permission
 import android.content.Intent
 import android.location.Location
 import android.os.Bundle
-import android.widget.Toast
 import com.example.uniride.databinding.ActivityDriverHomeBinding
+import com.example.uniride.utility.Config_permission
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -31,7 +30,7 @@ class DriverHomeActivity : BottomMenuActivity(), OnMapReadyCallback {
         setupMap()
 
         // Initialize location manager
-        initializeLocationManager()
+        //initializeLocationManager()
 
         binding.btnRouteInProgress.setOnClickListener {
             val intent = Intent(this, DriverRouteInProgressActivity::class.java).apply {
@@ -50,13 +49,15 @@ class DriverHomeActivity : BottomMenuActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
     }
-
+/*
     private fun initializeLocationManager() {
         locationManager = Config_permission(this) { location ->
             updateLocationOnMap(location)
         }
         locationManager.initialize()
     }
+
+ */
 
     private fun updateLocationOnMap(location: Location) {
         val currentLatLng = LatLng(location.latitude, location.longitude)

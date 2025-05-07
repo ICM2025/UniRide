@@ -19,25 +19,13 @@
         android:id="@+id/chip_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|end"
-        android:layout_margin="16dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="60dp"
+        android:layout_marginEnd="16dp"
         android:text="Disponible"
         app:chipBackgroundColor="@color/white"
         app:chipIcon="@drawable/ic_car"
         app:iconTint="@color/status_accepted" />
-
-    <!-- Botón para centrar ubicación -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/myLocation"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end|top"
-        android:layout_marginTop="80dp"
-        android:layout_marginEnd="16dp"
-        android:contentDescription="Mi ubicación"
-        android:src="@android:drawable/ic_menu_mylocation"
-        app:backgroundTint="@android:color/white"
-        app:tint="@color/text_color" />
 
     <!-- Botón principal para publicar viaje -->
 

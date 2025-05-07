@@ -12,18 +12,6 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-    <!-- Botón para centrar en la ubicación del usuario -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/myLocartion"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end|top"
-            android:layout_margin="16dp"
-            android:contentDescription="Mi ubicación"
-            android:src="@android:drawable/ic_menu_mylocation"
-            app:backgroundTint="@android:color/white"
-            app:tint="@color/text_color" />
-
     <!-- BottomSheet (mantener el mismo) -->
     <LinearLayout
         android:id="@+id/bottom_sheet"

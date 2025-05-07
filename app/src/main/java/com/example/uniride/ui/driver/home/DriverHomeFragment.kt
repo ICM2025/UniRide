@@ -1,342 +1,539 @@
-package com.example.uniride.ui.driver.home
+    package com.example.uniride.ui.driver.home
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.app.Activity.RESULT_OK
-import android.content.Context
-import android.content.Intent
-import android.content.IntentSender
-import android.content.pm.PackageManager
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.location.Location
-import android.os.Bundle
-import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.Toast
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-import com.example.uniride.R
-import com.example.uniride.databinding.FragmentDriverHomeBinding
-import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
-import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.LocationSettingsRequest
-import com.google.android.gms.location.LocationSettingsResponse
-import com.google.android.gms.location.Priority
-import com.google.android.gms.location.SettingsClient
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MapStyleOptions
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.tasks.Task
+    import android.content.Context
+    import android.content.Intent
+    import android.content.SharedPreferences
+    import android.location.Geocoder
+    import android.location.Location
+    import android.os.Bundle
+    import android.view.LayoutInflater
+    import android.view.View
+    import android.view.ViewGroup
+    import android.widget.Toast
+    import androidx.activity.result.ActivityResultLauncher
+    import androidx.activity.result.contract.ActivityResultContracts
+    import androidx.fragment.app.Fragment
+    import com.example.uniride.R
+    import com.example.uniride.databinding.FragmentDriverHomeBinding
+    import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
+    import com.example.uniride.utility.Config_permission
+    import com.google.android.gms.maps.GoogleMap
+    import com.google.android.gms.maps.OnMapReadyCallback
+    import com.google.android.gms.maps.SupportMapFragment
+    import com.google.android.gms.maps.model.LatLng
+    import com.google.android.gms.maps.model.MarkerOptions
+    import com.google.android.gms.maps.model.Polyline
+    import com.google.android.gms.maps.model.PolylineOptions
+    import com.google.android.gms.maps.CameraUpdateFactory
+    import com.google.android.gms.maps.model.LatLngBounds
+    import android.graphics.Color
+    import org.json.JSONObject
+    import java.io.BufferedReader
+    import java.io.InputStreamReader
+    import java.net.HttpURLConnection
+    import java.net.URL
+    import android.content.pm.PackageManager
+    import android.os.StrictMode
+    import android.util.Log
 
-class DriverHomeFragment : Fragment() ,OnMapReadyCallback {
+    class DriverHomeFragment : Fragment(), OnMapReadyCallback {
 
-    private var _binding: FragmentDriverHomeBinding? = null
-    private val binding get() = _binding!!
+        private var _binding: FragmentDriverHomeBinding? = null
+        private val binding get() = _binding!!
 
-    // Map and location properties
-    private var mMap: GoogleMap? = null
-    private lateinit var locationClient: FusedLocationProviderClient
-    private lateinit var sensorManager: SensorManager
-    private var lightSensor: Sensor? = null
-    private lateinit var sensorEventListener: SensorEventListener
-    private val defaultLocation = LatLng(4.6097, -74.0817) // Bogotá, Colombia
-    private var currentLocation: LatLng? = null
+        // Location utility
+        private lateinit var locationPermissionManager: Config_permission
 
-    // Location updates
-    private lateinit var locationRequest: LocationRequest
-    private lateinit var locationCallback: LocationCallback
+        // Route components
+        private var mMap: GoogleMap? = null
+        private var routePolyline: Polyline? = null
+        private lateinit var geocoder: Geocoder
+        private lateinit var sharedPreferences: SharedPreferences
 
-    // Permission request launcher
-    private val locationPermissionRequest = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            locationSettings()
-        } else {
-            Toast.makeText(
-                requireContext(),
-                "Se requieren permisos de ubicación para mostrar la ruta",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
+        // Location variables
+        private var originLocation: LatLng? = null
+        private var destinationLocation: LatLng? = null
+        private var stopLocations: MutableList<LatLng> = mutableListOf()
+        private var currentRoutePolyline: Polyline? = null
 
-    // Location settings request launcher
-    private val locationSettings = registerForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            getCurrentLocation()
-            startLocationUpdates()
-        } else {
-            Toast.makeText(requireContext(), "El GPS está apagado", Toast.LENGTH_LONG).show()
-        }
-    }
+        // Activity result launcher for publish trip flow
+        private lateinit var publishTripLauncher: ActivityResultLauncher<Intent>
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        _binding = FragmentDriverHomeBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+        // Flag to track if route is displayed
+        private var isRouteDisplayed = false
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        // Initialize location client
-        locationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        // NUEVA VARIABLE: Flag para prevenir recarga de mapa por ubicación
+        private var preventLocationCameraUpdate = false
 
-        // Setup sensor for map style (day/night)
-        sensorManager = requireActivity().getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
-        sensorEventListener = createSensorEventListener()
-
-        // Setup location updates callback
-        setupLocationUpdates()
-
-        // Setup map fragment
-        val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
-        mapFragment?.getMapAsync(this)
-
-
-        // Check permissions
-        checkLocationPermissions()
-
-        //navegar a actividad de publicar viaje
-        binding.btnPublishTrip.setOnClickListener {
-            val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
-            startActivity(intent)
+        // API Key
+        private val DIRECTIONS_API_KEY: String by lazy {
+            val applicationInfo = requireActivity().packageManager.getApplicationInfo(
+                requireActivity().packageName,
+                PackageManager.GET_META_DATA
+            )
+            applicationInfo.metaData.getString("com.google.android.geo.API_KEY") ?: ""
         }
 
+        override fun onCreateView(
+            inflater: LayoutInflater, container: ViewGroup?,
+            savedInstanceState: Bundle?
+        ): View {
+            _binding = FragmentDriverHomeBinding.inflate(inflater, container, false)
+            return binding.root
+        }
 
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
 
-    }
-    private fun setupLocationUpdates() {
-        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000)
-            .setWaitForAccurateLocation(true)
-            .setMinUpdateIntervalMillis(5000)
-            .build()
+            // Initialize SharedPreferences
+            sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
 
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                for (location in locationResult.locations) {
-                    updateUI(location)
+            // Initialize geocoder
+            geocoder = Geocoder(requireContext())
+
+            // Register the activity result launcher
+            registerPublishTripLauncher()
+
+            // Permitir operaciones de red en el hilo principal (solo para demo)
+            val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
+            StrictMode.setThreadPolicy(policy)
+
+            // Initialize permission manager with map callback and location callback
+            locationPermissionManager = Config_permission(
+                fragment = this,
+                mapReadyCallback = { googleMap ->
+                    // No hacemos nada adicional aquí, gestionamos todo en onMapReady
+                },
+                locationUpdateCallback = { location ->
+                    // MODIFICADO: Solo actualizar la cámara si no hay ruta activa
+                    if (!preventLocationCameraUpdate) {
+                        onLocationUpdated(location)
+                    }
+
+                    // Comprobar si necesitamos volver a mostrar la ruta
+                    if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && !isRouteDisplayed) {
+                        loadRouteAndDisplay()
+                    }
+                }
+            )
+
+            // Initialize the location manager
+            locationPermissionManager.initialize()
+
+            // Setup map fragment
+            val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
+            mapFragment?.getMapAsync(this)
+
+            // Set up button click listener
+            binding.btnPublishTrip.setOnClickListener {
+                val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
+                publishTripLauncher.launch(intent)
+            }
+        }
+
+        private fun registerPublishTripLauncher() {
+            publishTripLauncher = registerForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                if (result.resultCode == android.app.Activity.RESULT_OK) {
+                    // Route was published, immediately load and display it
+                    loadRouteAndDisplay()
+
+                    // Update UI if needed to reflect that a route is active
+                    updateUIForActiveRoute()
                 }
             }
         }
-    }
 
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-        mMap?.uiSettings?.isZoomControlsEnabled = true
-
-        // Check if we already have permission
-        if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED ||
-            ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            mMap?.isMyLocationEnabled = true
-            getCurrentLocation()
-        }
-    }
-
-    private fun checkLocationPermissions() {
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            locationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    updateUI(location)
-                    Log.i("LOCATIONKT", "Longitude: ${location.longitude}")
-                    Log.i("LOCATIONKT", "Latitude: ${location.latitude}")
-                } else {
-                    Log.w(
-                        "LOCATIONKT",
-                        "Ubicación nula. Puede que el GPS esté apagado o no haya señal aún."
-                    )
-                    locationSettings()
-                }
-            }
-        } else {
-            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                Toast.makeText(
-                    requireContext(),
-                    "El permiso es necesario para acceder a tu ubicación (GPS)",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-            locationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
-
-    private fun locationSettings() {
-        val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
-        val client: SettingsClient = LocationServices.getSettingsClient(requireActivity())
-        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
-
-        task.addOnSuccessListener { locationSettingsResponse ->
-            getCurrentLocation()
-            startLocationUpdates()
-        }
-
-        task.addOnFailureListener { exception ->
-            if (exception is ResolvableApiException) {
-                try {
-                    // Show dialog to resolve the problem
-                    val isr = IntentSenderRequest.Builder(exception.resolution).build()
-                    locationSettings.launch(isr)
-                } catch (sendEx: IntentSender.SendIntentException) {
-                    Toast.makeText(requireContext(), "No hay hardware GPS", Toast.LENGTH_LONG).show()
-                }
+        private fun updateUIForActiveRoute() {
+            // Update the UI to show that there's an active route
+            // For example, change the "Publish Trip" button to "Edit Trip" or "Cancel Trip"
+            if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+                binding.btnPublishTrip.text = "Editar Viaje"
+                // Adicionalmente, activamos el flag para prevenir actualizaciones de cámara por ubicación
+                preventLocationCameraUpdate = true
             }
         }
-    }
 
-    @SuppressLint("MissingPermission")
-    private fun getCurrentLocation() {
-        if (hasLocationPermission()) {
-            mMap?.isMyLocationEnabled = true
+        override fun onMapReady(googleMap: GoogleMap) {
+            // Save map reference
+            mMap = googleMap
 
-            locationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                location?.let {
-                    updateUI(it)
-                } ?: run {
-                    // If location is null, move camera to default location
-                    mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f))
-                }
+            // Set map settings to ensure route display persists - similar to SearchResultsFragment
+            googleMap.uiSettings.apply {
+                isZoomControlsEnabled = true
+                isMapToolbarEnabled = true
+                isZoomGesturesEnabled = true
+                isScrollGesturesEnabled = true
+                isRotateGesturesEnabled = true
+            }
+
+            // MODIFICADO: No configuramos listeners que puedan borrar el mapa
+            googleMap.setOnCameraMoveStartedListener(null)
+            googleMap.setOnCameraIdleListener(null)
+
+            // Delegate to the location permission manager
+            locationPermissionManager.onMapReady(googleMap)
+
+            // Check if there's a route to display
+            if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+                // MODIFICADO: Cargar la ruta después de un pequeño retraso para asegurar que el mapa esté listo
+                view?.postDelayed({
+                    loadRouteAndDisplay()
+                    updateUIForActiveRoute()
+                }, 500)
             }
         }
-    }
 
-    private fun updateUI(location: Location) {
-        currentLocation = LatLng(location.latitude, location.longitude)
-        Log.i("GPS_APP", "(lat: ${location.latitude}, long: ${location.longitude})")
+        private fun loadRouteAndDisplay() {
+            val originAddress = sharedPreferences.getString("ROUTE_ORIGIN", null)
+            val destinationAddress = sharedPreferences.getString("ROUTE_DESTINATION", null)
+            val stopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
 
-        mMap?.let { map ->
-            map.clear()
+            // If map is not ready yet, we'll try again later
+            if (mMap == null) {
+                return
+            }
 
-            val markerOptions = MarkerOptions()
-                .position(currentLocation!!)
-                .title("Mi ubicación")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
-                .snippet(
-                    "Lat: ${
-                        String.format(
-                            "%.6f",
-                            location.latitude
-                        )
-                    }, Lon: ${String.format("%.6f", location.longitude)}"
-                )
+            // Clear previous stops and route
+            stopLocations.clear()
+            routePolyline?.remove()
+            mMap?.clear()
 
-            map.addMarker(markerOptions)
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation!!, 15f))
-        }
-    }
+            // Reset the displayed flag
+            isRouteDisplayed = false
 
-    private fun createSensorEventListener(): SensorEventListener {
-        return object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent?) {
-                mMap?.let { googleMap ->
-                    if (event != null) {
-                        if (event.values[0] > 5000) {
-                            mMap?.setMapStyle(
-                                MapStyleOptions
-                                    .loadRawResourceStyle(requireContext(), R.raw.lightmap)
-                            )
-                        } else {
-                            mMap?.setMapStyle(
-                                MapStyleOptions
-                                    .loadRawResourceStyle(requireContext(), R.raw.darkmap)
-                            )
+            // If we have origin and destination
+            if (!originAddress.isNullOrEmpty() && !destinationAddress.isNullOrEmpty()) {
+                // Convert addresses to coordinates
+                originLocation = findLocation(originAddress)
+                destinationLocation = findLocation(destinationAddress)
+
+                // Load all stops
+                for (i in 0 until stopsCount) {
+                    val stopAddress = sharedPreferences.getString("ROUTE_STOP_$i", null)
+                    if (!stopAddress.isNullOrEmpty()) {
+                        val stopLocation = findLocation(stopAddress)
+                        if (stopLocation != null) {
+                            stopLocations.add(stopLocation)
                         }
                     }
                 }
-            }
 
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-                // Not needed
+                // Display route if we have origin and destination
+                if (originLocation != null && destinationLocation != null) {
+                    drawRoute(originLocation!!, destinationLocation!!, stopLocations)
+                    // MODIFICADO: Activar el flag para prevenir que las actualizaciones de ubicación muevan la cámara
+                    preventLocationCameraUpdate = true
+                    // Set the flag that route is displayed
+                    isRouteDisplayed = true
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "No se pudieron encontrar las ubicaciones",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
-    }
 
-    @SuppressLint("MissingPermission")
-    private fun startLocationUpdates() {
-        if (hasLocationPermission()) {
-            locationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                null
-            )
+        private fun findLocation(address: String): LatLng? {
+            try {
+                val addresses = geocoder.getFromLocationName(address, 2)
+                if (addresses != null && addresses.isNotEmpty()) {
+                    val addr = addresses[0]
+                    return LatLng(addr.latitude, addr.longitude)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(requireContext(), "Error al encontrar ubicación: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+            return null
         }
-    }
 
-    private fun stopLocationUpdates() {
-        locationClient.removeLocationUpdates(locationCallback)
-    }
+        private fun drawRoute(origin: LatLng, destination: LatLng, stops: List<LatLng>) {
+            try {
+                // Mostrar un indicador de progreso
+                Toast.makeText(requireContext(), "Obteniendo ruta...", Toast.LENGTH_SHORT).show()
 
-    private fun hasLocationPermission(): Boolean {
-        return ActivityCompat.checkSelfPermission(
-            requireContext(),
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(
+                // Llamar a getDirectionsData de manera asíncrona
+                // La lógica de dibujo se ha movido a displayRouteOnMap que será llamado como callback
+                getDirectionsData(origin, destination, stops)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(
                     requireContext(),
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    override fun onResume() {
-        super.onResume()
-        lightSensor?.let {
-            sensorManager.registerListener(
-                sensorEventListener,
-                it,
-                SensorManager.SENSOR_DELAY_NORMAL
-            )
+                    "Error al obtener la ruta: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                isRouteDisplayed = false
+            }
         }
 
-        if (hasLocationPermission()) {
-            startLocationUpdates()
+        private fun getDirectionsData(
+            origin: LatLng,
+            destination: LatLng,
+            waypoints: List<LatLng>
+        ): List<LatLng> {
+            val path = ArrayList<LatLng>()
+            try {
+                // Build URL for Google Directions API - similar to SearchResultsFragment approach
+                var urlString = "https://maps.googleapis.com/maps/api/directions/json?" +
+                        "origin=${origin.latitude},${origin.longitude}" +
+                        "&destination=${destination.latitude},${destination.longitude}" +
+                        "&mode=driving"
+
+                // Add waypoints if any
+                if (waypoints.isNotEmpty()) {
+                    urlString += "&waypoints="
+                    waypoints.forEachIndexed { index, point ->
+                        urlString += "${point.latitude},${point.longitude}"
+                        if (index < waypoints.size - 1) urlString += "|"
+                    }
+                }
+
+                urlString += "&key=$DIRECTIONS_API_KEY"
+
+                // MODIFICADO: Usar un hilo en segundo plano para operaciones de red
+                Thread {
+                    try {
+                        val url = URL(urlString)
+                        val connection = url.openConnection() as HttpURLConnection
+                        connection.requestMethod = "GET"
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 15000
+
+                        val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                        val response = StringBuilder()
+                        var line: String?
+
+                        while (reader.readLine().also { line = it } != null) {
+                            response.append(line)
+                        }
+
+                        reader.close()
+
+                        val jsonObject = JSONObject(response.toString())
+
+                        val status = jsonObject.getString("status")
+                        if (status == "OK") {
+                            val routes = jsonObject.getJSONArray("routes")
+
+                            if (routes.length() > 0) {
+                                val legs = routes.getJSONObject(0).getJSONArray("legs")
+
+                                for (i in 0 until legs.length()) {
+                                    val steps = legs.getJSONObject(i).getJSONArray("steps")
+
+                                    for (j in 0 until steps.length()) {
+                                        val points =
+                                            steps.getJSONObject(j).getJSONObject("polyline").getString("points")
+                                        path.addAll(decodePoly(points))
+                                    }
+                                }
+
+                                // Actualizar la UI en el hilo principal
+                                requireActivity().runOnUiThread {
+                                    displayRouteOnMap(path, origin, destination, waypoints)
+                                }
+                            }
+                        } else {
+                            Log.e("DirectionsAPI", "Status no OK: $status")
+                            requireActivity().runOnUiThread {
+                                Toast.makeText(requireContext(), "Error al obtener la ruta: $status", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Log.e("DirectionsAPI", "Error obteniendo ruta: ${e.message}")
+                        requireActivity().runOnUiThread {
+                            Toast.makeText(requireContext(), "Error al obtener la ruta: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }.start()
+
+                // Devolver lista vacía ya que la operación es asíncrona ahora
+                return path
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("DirectionsAPI", "Error obteniendo ruta: ${e.message}")
+            }
+            return path
+        }
+
+        // AÑADIDO: Nuevo método para mostrar la ruta en el mapa
+        private fun displayRouteOnMap(path: List<LatLng>, origin: LatLng, destination: LatLng, stops: List<LatLng>) {
+            try {
+                // Remove previous polyline if exists
+                routePolyline?.remove()
+
+
+                if (path.isNotEmpty()) {
+                    // Crear la polilínea
+                    val polylineOptions = PolylineOptions()
+                        .addAll(path)
+                        .width(12f)
+                        .color(Color.BLUE)
+                        .geodesic(true)
+
+                    // Guardar referencia de la polilínea para poder acceder a ella más tarde
+                    routePolyline = mMap?.addPolyline(polylineOptions)
+
+                    // Add markers
+                    mMap?.addMarker(
+                        MarkerOptions()
+                            .position(origin)
+                            .title("Origen")
+                    )
+
+                    mMap?.addMarker(
+                        MarkerOptions()
+                            .position(destination)
+                            .title("Destino")
+                    )
+
+                    // Add markers for stops
+                    stops.forEachIndexed { index, latLng ->
+                        mMap?.addMarker(
+                            MarkerOptions()
+                                .position(latLng)
+                                .title("Parada ${index + 1}")
+                        )
+                    }
+
+                    // Create bounds for camera
+                    val builder = LatLngBounds.Builder()
+                    builder.include(origin)
+                    builder.include(destination)
+                    stops.forEach { builder.include(it) }
+
+                    try {
+                        val bounds = builder.build()
+                        val padding = 100
+                        val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
+                        // Usar moveCamera en lugar de animateCamera para evitar problemas con animaciones
+                        mMap?.moveCamera(cameraUpdate)
+                    } catch (e: Exception) {
+                        // Fallback in case bounds calculation fails
+                        mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(origin, 12f))
+                        e.printStackTrace()
+                    }
+
+                    // Marcar que la ruta se visualiza correctamente
+                    isRouteDisplayed = true
+
+                    // Prevenir que las actualizaciones de ubicación muevan la cámara
+                    preventLocationCameraUpdate = true
+                } else {
+                    Toast.makeText(requireContext(), "No se pudo trazar la ruta", Toast.LENGTH_SHORT)
+                        .show()
+                    isRouteDisplayed = false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(
+                    requireContext(),
+                    "Error al obtener la ruta: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                isRouteDisplayed = false
+            }
+        }
+
+        private fun decodePoly(encoded: String): List<LatLng> {
+            val poly = ArrayList<LatLng>()
+            var index = 0
+            val len = encoded.length
+            var lat = 0
+            var lng = 0
+
+            while (index < len) {
+                var b: Int
+                var shift = 0
+                var result = 0
+
+                do {
+                    b = encoded[index++].toInt() - 63
+                    result = result or (b and 0x1f shl shift)
+                    shift += 5
+                } while (b >= 0x20)
+
+                val dlat = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+                lat += dlat
+
+                shift = 0
+                result = 0
+
+                do {
+                    b = encoded[index++].toInt() - 63
+                    result = result or (b and 0x1f shl shift)
+                    shift += 5
+                } while (b >= 0x20)
+
+                val dlng = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+                lng += dlng
+
+                val p = LatLng(lat.toDouble() / 1E5, lng.toDouble() / 1E5)
+                poly.add(p)
+            }
+            return poly
+        }
+
+        // Handle specific driver actions when location is updated
+        private fun onLocationUpdated(location: Location) {
+            // MODIFICADO: No hacer nada si estamos previniendo actualizaciones de cámara por ubicación
+            if (preventLocationCameraUpdate) {
+                return
+            }
+
+            // Si no hay ruta activa o no se está mostrando, permitir que locationPermissionManager actualice la cámara
+            if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && !isRouteDisplayed && mMap != null) {
+                loadRouteAndDisplay()
+            }
+        }
+
+        override fun onResume() {
+            super.onResume()
+            locationPermissionManager.onResume()
+
+            // Update the UI if there's an active route
+            if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+                updateUIForActiveRoute()
+                // Make sure route is displayed when fragment resumes
+                if (!isRouteDisplayed && mMap != null) {
+                    // MODIFICADO: Agregar un pequeño retraso para asegurar que el mapa esté listo
+                    view?.postDelayed({
+                        loadRouteAndDisplay()
+                    }, 300)
+                }
+            }
+        }
+
+        override fun onPause() {
+            super.onPause()
+            locationPermissionManager.onPause()
+            // MODIFICADO: No borrar la ruta al pausar el fragmento
+            // No resetear isRouteDisplayed ni preventLocationCameraUpdate
+        }
+
+        // AÑADIDO: Método para manejar cuando se vuelve a este fragmento desde otro
+        override fun onStart() {
+            super.onStart()
+            // Si hay una ruta publicada, asegurarse de que se muestre correctamente
+            if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+                preventLocationCameraUpdate = true
+                if (mMap != null && !isRouteDisplayed) {
+                    view?.postDelayed({
+                        loadRouteAndDisplay()
+                    }, 300)
+                }
+            }
+        }
+
+        override fun onDestroyView() {
+            super.onDestroyView()
+            _binding = null
+            // No eliminar la polilínea ni restablecer isRouteDisplayed aquí
+            // Esto es crucial para que la ruta se mantenga al volver al fragmento
         }
     }
-
-    override fun onPause() {
-        super.onPause()
-        sensorManager.unregisterListener(sensorEventListener)
-        stopLocationUpdates()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
-}
