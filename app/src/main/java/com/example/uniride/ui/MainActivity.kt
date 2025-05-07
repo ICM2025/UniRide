@@ -160,6 +160,20 @@ class MainActivity : AppCompatActivity() {
                     lifecycleScope.launch{
                         SupabaseInstance.client.auth.signOut()
                     }
+                    // Borrar credenciales guardadas
+                    val masterKey = androidx.security.crypto.MasterKey.Builder(this)
+                        .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+
+                    val securePrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                        this,
+                        "secure_user_prefs",
+                        masterKey,
+                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    )
+
+                    securePrefs.edit().clear().apply()
                     startActivity(Intent(this, AuthActivity::class.java))
                     finish()
                     return@setNavigationItemSelectedListener true

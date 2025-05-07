@@ -8,9 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.biometric.BiometricPrompt
-import androidx.biometric.BiometricPrompt.PromptInfo
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -21,7 +18,6 @@ import com.example.uniride.ui.MainActivity
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.launch
-import java.util.concurrent.Executor
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
@@ -31,8 +27,6 @@ class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
-    private lateinit var biometricPrompt: BiometricPrompt
-    private lateinit var promptInfo: PromptInfo
     private lateinit var securePrefs: SharedPreferences
     private lateinit var masterKey: MasterKey
 
@@ -59,27 +53,6 @@ class LoginFragment : Fragment() {
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
-        }
-        // Verificar si las credenciales están guardadas
-        val savedEmail = securePrefs.getString("user_email", null)
-        val savedPassword = securePrefs.getString("user_password", null)
-
-        if (!savedEmail.isNullOrEmpty() && !savedPassword.isNullOrEmpty()) {
-            // Si las credenciales están guardadas, configura y muestra la autenticación biométrica
-            setupBiometricPrompt()
-
-            // Configura y muestra el prompt para la autenticación biométrica
-            promptInfo = PromptInfo.Builder()
-                .setTitle("Autenticación biométrica")
-                .setSubtitle("Inicia sesión usando tu huella")
-                .setNegativeButtonText("Cancelar")
-                .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK)
-                .build()
-
-            biometricPrompt.authenticate(promptInfo)
-        } else {
-            // Si no hay credenciales guardadas, no mostrar el prompt
-            Log.d("LoginFragment", "No hay credenciales guardadas")
         }
 
         //Va a al fragmento de registrar usuario
@@ -118,37 +91,6 @@ class LoginFragment : Fragment() {
             findNavController().navigate(R.id.action_loginFragment_to_recoverPasswordFragment)
         }
     }
-
-    private fun setupBiometricPrompt() {
-        val executor: Executor = ContextCompat.getMainExecutor(requireContext())
-        biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-                val savedEmail = securePrefs.getString("user_email", null)
-                val savedPassword = securePrefs.getString("user_password", null)
-
-                if (!savedEmail.isNullOrEmpty() && !savedPassword.isNullOrEmpty()) {
-                    lifecycleScope.launch {
-                        loginUser(savedEmail, savedPassword)
-                    }
-                } else {
-                    Toast.makeText(requireContext(), "No se encontraron credenciales guardadas", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                super.onAuthenticationError(errorCode, errString)
-                Log.e("Biometric", "Error de autenticación: $errString")
-            }
-
-            override fun onAuthenticationFailed() {
-                super.onAuthenticationFailed()
-                Log.e("Biometric", "Autenticación biométrica fallida")
-            }
-        })
-    }
-
-
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -157,7 +99,7 @@ class LoginFragment : Fragment() {
     //reanudada sin bloquear el hilo en el que se ejecuta. Permitiendo
     //escrbir código asíncrono, cosa necesaria para utilizar supabase
 
-    suspend fun loginUser(email: String, password: String) {
+    private suspend fun loginUser(email: String, password: String) {
         try {
             SupabaseInstance.client.auth.signInWith(Email) {
                 this.email = email
