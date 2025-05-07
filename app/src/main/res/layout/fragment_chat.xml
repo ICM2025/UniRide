@@ -1,0 +1,105 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Título + botón volver -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="80dp"
+        android:layout_marginBottom="20dp">
+
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_button_circle"
+        android:padding="8dp"
+        android:src="@drawable/ic_arrow_left"
+        android:contentDescription="Volver"
+        app:tint="@color/main_color" />
+
+    <TextView
+        android:id="@+id/passengerNameText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pasajero"
+        android:layout_weight="1"
+        android:textAlignment="center"
+        android:layout_marginStart="50dp"
+        android:textSize="30sp"
+        android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/callButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="50dp"
+            android:background="@drawable/bg_button_circle"
+            android:padding="8dp"
+            android:src="@android:drawable/sym_action_call"
+            android:contentDescription="Llamar"
+            app:tint="@color/main_color"/>
+
+    </LinearLayout>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_marginBottom="8dp"
+        android:background="@color/main_color" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/messagesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:layout_marginStart="250dp"
+        android:textAlignment="textEnd"
+        />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_marginBottom="8dp"
+        android:background="@color/main_color" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="100dp"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/moreButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_button_circle"
+            android:padding="8dp"
+            android:src="@drawable/ic_adjuntar"
+            android:contentDescription="Llamar"
+            app:tint="@color/main_color"/>
+
+        <EditText
+            android:id="@+id/messageInput"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="Escribe tu mensaje" />
+
+        <ImageButton
+            android:id="@+id/sendButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_button_circle"
+            android:padding="8dp"
+            android:src="@drawable/enviarmensaje"
+            android:contentDescription="Llamar"
+            app:tint="@color/main_color"/>
+    </LinearLayout>
+</LinearLayout>

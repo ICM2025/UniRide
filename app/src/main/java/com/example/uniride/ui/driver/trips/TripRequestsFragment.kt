@@ -6,12 +6,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentTripRequestBinding
 import com.example.uniride.domain.adapter.PassengerRequestsAdapter
 import com.example.uniride.domain.model.PassengerRequest
 import com.example.uniride.domain.model.PassengerRequestStatus
+import com.example.uniride.ui.shared.ChatFragment
 
 class TripRequestsFragment : Fragment() {
 
@@ -108,8 +110,11 @@ class TripRequestsFragment : Fragment() {
 
 
         PassengerRequestDetailBottomSheet(details) {
-            Toast.makeText(requireContext(), "Abrir chat con ${details.passengerName}", Toast.LENGTH_SHORT).show()
             // acá se lanza actividad para el chat
+            val action = TripRequestsFragmentDirections
+                .actionTripRequestsFragmentToChatFragment(request.passengerName)
+            findNavController().navigate(action)
+
         }.show(parentFragmentManager, "PassengerRequestDetail")
     }
 

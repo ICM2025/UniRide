@@ -16,9 +16,24 @@
         android:name="com.example.uniride.ui.driver.trips.DriverTripsFragment"
         android:label="Gestionar viajes"
         tools:layout="@layout/fragment_driver_trips" />
+
     <fragment
         android:id="@+id/tripRequestsFragment"
         android:name="com.example.uniride.ui.driver.trips.TripRequestsFragment"
         android:label="fragment_trip_request"
-        tools:layout="@layout/fragment_trip_request" />
+        tools:layout="@layout/fragment_trip_request" >
+
+        <action
+            android:id="@+id/action_tripRequestsFragment_to_chatFragment"
+            app:destination="@id/chatFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.example.uniride.ui.shared.ChatFragment"
+        android:label="Chat">
+        <argument
+            android:name="passengerName"
+            app:argType="string" />
+    </fragment>
+
 </navigation>
