@@ -6,11 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.example.uniride.R
-import com.example.uniride.connection.SupabaseInstance
 import com.example.uniride.databinding.FragmentPassengerProfileBinding
-import io.github.jan.supabase.auth.auth
-import kotlinx.serialization.json.*
-
 
 class PassengerProfileFragment : Fragment() {
 
@@ -31,16 +27,8 @@ class PassengerProfileFragment : Fragment() {
         binding.btnBack.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
-        //Se carga el usuario
-        val user = SupabaseInstance.client.auth.currentUserOrNull()
-        //Se imprime el nombre y el email del usuario
-        user?.let {
-            val email = it.email
-            val username = it.userMetadata?.get("username")?.jsonPrimitive?.content
-            binding.tvName.text = username
-            binding.tvEmail.text = email
-        }
 
+        // ACÁ SE DEBERÍAN CARGAR DATOS DE PERFIL DESDE DB
     }
 
     override fun onDestroyView() {

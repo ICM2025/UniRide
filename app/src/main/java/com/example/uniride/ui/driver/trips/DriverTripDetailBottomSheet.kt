@@ -1,6 +1,7 @@
 package com.example.uniride.ui.driver.trips
 
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -37,6 +38,17 @@ class DriverTripDetailBottomSheet(
         tvSummary.text = "3 pasajeros aceptados · 2 pendientes"
 
         // Botones
+
+        view.findViewById<MaterialButton>(R.id.btn_start_trip).setOnClickListener {
+            val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
+            val editor = sharedPreferences.edit()
+            editor.putBoolean("HAS_ACTIVE_ROUTE", true)
+            editor.apply()
+
+            Toast.makeText(requireContext(), "Viaje iniciado", Toast.LENGTH_SHORT).show()
+            dismiss()
+        }
+
         view.findViewById<MaterialButton>(R.id.btn_edit_trip).setOnClickListener {
             Toast.makeText(requireContext(), "Editar viaje", Toast.LENGTH_SHORT).show()
             // se cierra bottom sheet y se debería navegar

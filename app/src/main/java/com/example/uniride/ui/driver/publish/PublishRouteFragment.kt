@@ -231,6 +231,7 @@ class PublishRouteFragment : Fragment() {
 
         // Set flag to indicate a route has been published
         editor.putBoolean("HAS_PUBLISHED_ROUTE", true)
+        editor.putBoolean("HAS_ACTIVE_ROUTE", false)
 
         editor.apply()
     }

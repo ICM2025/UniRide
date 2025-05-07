@@ -37,26 +37,20 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize permission manager with map callback and location callback
         locationPermissionManager = Config_permission(
             fragment = this,
             mapReadyCallback = { googleMap ->
-                // Any additional map customization specific to passenger can go here
             },
             locationUpdateCallback = { location ->
-                // Any specific passenger location update logic can go here
                 onLocationUpdated(location)
             }
         )
 
-        // Initialize the location manager
         locationPermissionManager.initialize()
 
-        // Setup map fragment
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
 
-        // Setup bottom sheet
         setupBottomSheet()
     }
 
@@ -72,20 +66,14 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback {
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
-        // Delegate to the location permission manager
         locationPermissionManager.onMapReady(googleMap)
     }
 
-    // Handle specific passenger actions when location is updated
     private fun onLocationUpdated(location: Location) {
-        // Set up destination search click listener here since it depends on location
         binding.etDestination.setOnClickListener {
             val intent = Intent(requireContext(), SearchFlowActivity::class.java)
             startActivity(intent)
         }
-
-        // Any additional logic specific to passenger view when location changes
-        // For example, show nearby drivers, update ETA, etc.
     }
 
     override fun onResume() {

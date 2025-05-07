@@ -108,6 +108,18 @@
         android:gravity="end">
 
         <com.google.android.material.button.MaterialButton
+         android:id="@+id/btn_start_trip"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:text="Empezar"
+         android:textAllCaps="false"
+         android:icon="@drawable/ic_edit"
+         android:iconTint="@color/main_color"
+         android:textColor="@color/main_color"
+         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+         android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_edit_trip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

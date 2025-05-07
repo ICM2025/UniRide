@@ -1,5 +1,7 @@
 package com.example.uniride.ui.driver.trips
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -41,6 +43,7 @@ class DriverTripsFragment : Fragment() {
     }
 
     private fun loadTrips() {
+        val savedTrips = loadTripsFromSharedPreferences()
         val sampleTrips = listOf(
             DriverTripItem(
                 travelOption = TravelOption(
@@ -82,13 +85,65 @@ class DriverTripsFragment : Fragment() {
             )
         )
 
-        adapter = DriverTripsAdapter(sampleTrips) { selectedTrip ->
+        val allTrips = savedTrips + sampleTrips
+
+        adapter = DriverTripsAdapter(allTrips) { selectedTrip ->
             val bottomSheet = DriverTripDetailBottomSheet(selectedTrip)
             bottomSheet.show(parentFragmentManager, "TravelDetail")
         }
 
         binding.rvDriverTrips.adapter = adapter
     }
+
+    private fun loadTripsFromSharedPreferences(): List<DriverTripItem> {
+        val sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
+        val trips = mutableListOf<DriverTripItem>()
+
+        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+            val origin = sharedPreferences.getString("ROUTE_ORIGIN", "") ?: ""
+            val destination = sharedPreferences.getString("ROUTE_DESTINATION", "") ?: ""
+
+            val trip = DriverTripItem(
+                travelOption = TravelOption(
+                    driverName = "Tú", // Nombre del usuario actual
+                    description = "Viaje programado",
+                    price = 15000, // Precio por defecto o guardado
+                    driverImage = R.drawable.ic_profile,
+                    drawableResId = R.drawable.ic_car,
+                    availableSeats = 4, // O un valor guardado
+                    origin = origin,
+                    destination = destination,
+                    departureTime = "08:00", // O un valor guardado
+                    intermediateStops = getIntermediateStopsFromPrefs(sharedPreferences),
+                    travelDate = LocalDate.now() // O la fecha guardada
+                ),
+                acceptedCount = 0,
+                pendingCount = 0,
+                hasNewMessages = false,
+                isFull = false
+            )
+
+            trips.add(trip)
+        }
+
+        return trips
+    }
+
+    // 2. Método auxiliar para obtener las paradas intermedias
+    private fun getIntermediateStopsFromPrefs(sharedPreferences: SharedPreferences): List<String> {
+        val stops = mutableListOf<String>()
+        val stopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
+
+        for (i in 0 until stopsCount) {
+            val stop = sharedPreferences.getString("ROUTE_STOP_$i", null)
+            if (!stop.isNullOrEmpty()) {
+                stops.add(stop)
+            }
+        }
+
+        return stops
+    }
+
 
     override fun onDestroyView() {
         super.onDestroyView()
