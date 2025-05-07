@@ -64,53 +64,35 @@ class Config_permission(
     private lateinit var locationPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var locationSettingsLauncher: ActivityResultLauncher<IntentSenderRequest>
 
-    /**
-     * Inicializa todos los componentes necesarios
-     */
     fun initialize() {
         initializeLocationComponents()
         initializeSensorComponents()
         registerPermissionLaunchers()
     }
 
-    /**
-     * Configura el mapa cuando está listo
-     */
     fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap?.uiSettings?.isZoomControlsEnabled = true
 
-        // Apply any map configurations
         applyMapSettings()
 
-        // Notify via callback
         mapReadyCallback(googleMap)
 
-        // Check permissions after map is ready
         checkLocationPermissions()
     }
 
-    /**
-     * Configura los componentes de localización
-     */
     private fun initializeLocationComponents() {
         locationClient = LocationServices.getFusedLocationProviderClient(fragment.requireActivity())
         locationRequest = createLocationRequest()
         locationCallback = createLocationCallback()
     }
 
-    /**
-     * Inicializa los componentes de sensor
-     */
     private fun initializeSensorComponents() {
         sensorManager = fragment.requireActivity().getSystemService(Context.SENSOR_SERVICE) as SensorManager
         lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         sensorEventListener = createSensorEventListener()
     }
 
-    /**
-     * Registra los launchers para permisos y configuraciones
-     */
     private fun registerPermissionLaunchers() {
         locationPermissionLauncher = fragment.registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -118,11 +100,7 @@ class Config_permission(
             if (isGranted) {
                 checkLocationSettings()
             } else {
-                Toast.makeText(
-                    fragment.requireContext(),
-                    "Se requieren permisos de ubicación para mostrar la ruta",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(fragment.requireContext(),"Se requieren permisos de ubicación para mostrar la ruta",Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -138,17 +116,10 @@ class Config_permission(
         }
     }
 
-    /**
-     * Configura las opciones del mapa
-     */
     private fun applyMapSettings() {
-        // Set initial map style
-        updateMapStyle(5000f) // Default to light mode
+        updateMapStyle(5000f)
     }
 
-    /**
-     * Verifica los permisos de ubicación
-     */
     fun checkLocationPermissions() {
         if (hasLocationPermissions()) {
             requestLastLocation()
@@ -159,19 +130,12 @@ class Config_permission(
                     Manifest.permission.ACCESS_FINE_LOCATION
                 )
             ) {
-                Toast.makeText(
-                    fragment.requireContext(),
-                    "El permiso es necesario para acceder a tu ubicación (GPS)",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(fragment.requireContext(),"El permiso es necesario para acceder a tu ubicación (GPS)",Toast.LENGTH_LONG).show()
             }
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    /**
-     * Verifica si ya se tienen los permisos de ubicación
-     */
     private fun hasLocationPermissions(): Boolean {
         return ContextCompat.checkSelfPermission(
             fragment.requireContext(),
@@ -183,9 +147,6 @@ class Config_permission(
                 ) == PackageManager.PERMISSION_GRANTED
     }
 
-    /**
-     * Solicita la última ubicación conocida
-     */
     private fun requestLastLocation() {
         if (hasLocationPermissions()) {
             try {
@@ -206,10 +167,6 @@ class Config_permission(
         }
     }
 
-
-    /**
-     * Crea la configuración de la solicitud de ubicación
-     */
     private fun createLocationRequest(): LocationRequest {
         return LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000)
             .setWaitForAccurateLocation(true)
@@ -217,9 +174,6 @@ class Config_permission(
             .build()
     }
 
-    /**
-     * Crea el callback para las actualizaciones de ubicación
-     */
     private fun createLocationCallback(): LocationCallback {
         return object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
@@ -230,9 +184,6 @@ class Config_permission(
         }
     }
 
-    /**
-     * Crea el listener para el sensor de luz
-     */
     private fun createSensorEventListener(): SensorEventListener {
         return object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
@@ -242,14 +193,10 @@ class Config_permission(
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-                // Not needed
             }
         }
     }
 
-    /**
-     * Actualiza el estilo del mapa según la luz ambiental
-     */
     private fun updateMapStyle(lightValue: Float) {
         mMap?.let { googleMap ->
             if (lightValue > 5000) {
@@ -264,9 +211,6 @@ class Config_permission(
         }
     }
 
-    /**
-     * Verifica la configuración de ubicación del dispositivo
-     */
     private fun checkLocationSettings() {
         val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
         val client: SettingsClient = LocationServices.getSettingsClient(fragment.requireActivity())
@@ -289,9 +233,6 @@ class Config_permission(
         }
     }
 
-    /**
-     * Obtiene la ubicación actual
-     */
     @SuppressLint("MissingPermission")
     fun getCurrentLocation() {
         if (hasLocationPermissions()) {
@@ -301,16 +242,12 @@ class Config_permission(
                 location?.let {
                     updateUI(it)
                 } ?: run {
-                    // If location is null, move camera to default location
                     mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f))
                 }
             }
         }
     }
 
-    /**
-     * Actualiza la interfaz con la ubicación
-     */
     private fun updateUI(location: Location) {
         val currentLocation = LatLng(location.latitude, location.longitude)
         Log.i("GPS_APP", "(lat: ${location.latitude}, long: ${location.longitude})")
@@ -334,14 +271,9 @@ class Config_permission(
             map.addMarker(markerOptions)
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
         }
-
-        // Call the location update callback if provided
         locationUpdateCallback?.invoke(location)
     }
 
-    /**
-     * Inicia las actualizaciones de ubicación
-     */
     @SuppressLint("MissingPermission")
     fun startLocationUpdates() {
         if (hasLocationPermissions()) {
@@ -353,16 +285,10 @@ class Config_permission(
         }
     }
 
-    /**
-     * Detiene las actualizaciones de ubicación
-     */
     fun stopLocationUpdates() {
         locationClient.removeLocationUpdates(locationCallback)
     }
 
-    /**
-     * Resume el ciclo de vida
-     */
     fun onResume() {
         lightSensor?.let {
             sensorManager.registerListener(
@@ -379,24 +305,15 @@ class Config_permission(
         }
     }
 
-    /**
-     * Pausa el ciclo de vida
-     */
     fun onPause() {
         sensorManager.unregisterListener(sensorEventListener)
         stopLocationUpdates()
     }
 
-    /**
-     * Obtiene el mapa configurado
-     */
     fun getMap(): GoogleMap? {
         return mMap
     }
 
-    /**
-     * Obtiene la última ubicación conocida
-     */
     fun getLastKnownLocation(): Location? {
         return lastKnownLocation
     }

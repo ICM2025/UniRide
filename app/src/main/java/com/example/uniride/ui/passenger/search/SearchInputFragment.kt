@@ -77,10 +77,9 @@ class SearchInputFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Inicializar Config_permission con un callback para cuando se actualice la ubicación
         configPermission = Config_permission(
             fragment = this,
-            mapReadyCallback = { googleMap: GoogleMap -> /* No necesitamos el mapa aquí */ },
+            mapReadyCallback = { googleMap: GoogleMap -> },
             locationUpdateCallback = { location: Location ->
                 // Guardar la ubicación actual pero no la mostramos automáticamente
                 currentLocation = location
@@ -99,7 +98,6 @@ class SearchInputFragment : Fragment() {
         binding.rvRecentPlaces.layoutManager = LinearLayoutManager(requireContext())
         binding.rvRecentPlaces.adapter = adapter
 
-        // Forzar apertura de teclado
         binding.etDestination.requestFocus()
         requireActivity().window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
 
@@ -124,25 +122,16 @@ class SearchInputFragment : Fragment() {
         } else {
             // Si no tenemos ubicación, solicitamos acceso y actualizaciones
             configPermission.checkLocationPermissions()
-            Toast.makeText(
-                requireContext(),
-                "Obteniendo tu ubicación...",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(requireContext(),"Obteniendo tu ubicación...",Toast.LENGTH_SHORT).show()
 
-            // Esperar un momento y luego intentar nuevamente
             view?.postDelayed({
                 val updatedLocation = configPermission.getLastKnownLocation()
                 if (updatedLocation != null) {
                     useLocationForAddress(updatedLocation)
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "No se pudo obtener la ubicación. Intenta nuevamente.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(),"No se pudo obtener la ubicación. Intenta nuevamente.",Toast.LENGTH_SHORT).show()
                 }
-            }, 2000) // Esperar 2 segundos
+            }, 2000)
         }
     }
 
@@ -166,11 +155,7 @@ class SearchInputFragment : Fragment() {
                 updateSearchButtonVisibility()
             }
         } catch (e: IOException) {
-            Toast.makeText(
-                requireContext(),
-                "No se pudo obtener la dirección",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(requireContext(),"No se pudo obtener la dirección",Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -194,7 +179,6 @@ class SearchInputFragment : Fragment() {
             )
         }
 
-        // Set focus listeners to track which field is active
         binding.etOrigin.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 activeField = EditTextField.ORIGIN
@@ -207,7 +191,6 @@ class SearchInputFragment : Fragment() {
             }
         }
 
-        // Configurar botones de búsqueda por voz
         binding.btnVoiceOrigin.setOnClickListener {
             activeField = EditTextField.ORIGIN
             startVoiceRecognition()
@@ -246,11 +229,7 @@ class SearchInputFragment : Fragment() {
         try {
             speechRecognizerLauncher.launch(intent)
         } catch (e: Exception) {
-            Toast.makeText(
-                requireContext(),
-                "Tu dispositivo no soporta reconocimiento de voz",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(requireContext(),"Tu dispositivo no soporta reconocimiento de voz",Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -290,11 +269,7 @@ class SearchInputFragment : Fragment() {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     startVoiceRecognition()
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Permiso de micrófono denegado",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(),"Permiso de micrófono denegado",Toast.LENGTH_SHORT).show()
                 }
             }
         }

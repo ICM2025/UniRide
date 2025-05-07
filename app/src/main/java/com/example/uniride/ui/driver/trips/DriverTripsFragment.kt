@@ -99,28 +99,32 @@ class DriverTripsFragment : Fragment() {
         val sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
         val trips = mutableListOf<DriverTripItem>()
 
-        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
-            val origin = sharedPreferences.getString("ROUTE_ORIGIN", "") ?: ""
-            val destination = sharedPreferences.getString("ROUTE_DESTINATION", "") ?: ""
+        // Obtener todos los IDs de viajes guardados
+        val tripIds = sharedPreferences.getStringSet("SAVED_TRIP_IDS", emptySet()) ?: emptySet()
+
+        for (tripId in tripIds) {
+            val origin = sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "") ?: ""
+            val destination = sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "") ?: ""
 
             val trip = DriverTripItem(
                 travelOption = TravelOption(
-                    driverName = "Tú", // Nombre del usuario actual
+                    driverName = "Tú",
                     description = "Viaje programado",
-                    price = 15000, // Precio por defecto o guardado
+                    price = 15000,
                     driverImage = R.drawable.ic_profile,
                     drawableResId = R.drawable.ic_car,
-                    availableSeats = 4, // O un valor guardado
+                    availableSeats = 4,
                     origin = origin,
                     destination = destination,
-                    departureTime = "08:00", // O un valor guardado
-                    intermediateStops = getIntermediateStopsFromPrefs(sharedPreferences),
-                    travelDate = LocalDate.now() // O la fecha guardada
+                    departureTime = "08:00",
+                    intermediateStops = getIntermediateStopsFromPrefs(sharedPreferences, tripId),
+                    travelDate = LocalDate.now()
                 ),
                 acceptedCount = 0,
                 pendingCount = 0,
                 hasNewMessages = false,
-                isFull = false
+                isFull = false,
+                tripId = tripId
             )
 
             trips.add(trip)
@@ -129,13 +133,13 @@ class DriverTripsFragment : Fragment() {
         return trips
     }
 
-    // 2. Método auxiliar para obtener las paradas intermedias
-    private fun getIntermediateStopsFromPrefs(sharedPreferences: SharedPreferences): List<String> {
+
+    private fun getIntermediateStopsFromPrefs(sharedPreferences: SharedPreferences, tripId: String): List<String> {
         val stops = mutableListOf<String>()
-        val stopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
+        val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
 
         for (i in 0 until stopsCount) {
-            val stop = sharedPreferences.getString("ROUTE_STOP_$i", null)
+            val stop = sharedPreferences.getString("TRIP_${tripId}_STOP_$i", null)
             if (!stop.isNullOrEmpty()) {
                 stops.add(stop)
             }

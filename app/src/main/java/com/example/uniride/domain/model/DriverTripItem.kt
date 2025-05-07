@@ -5,5 +5,6 @@ data class DriverTripItem(
     val acceptedCount: Int,
     val pendingCount: Int,
     val isFull: Boolean,
-    val hasNewMessages: Boolean
+    val hasNewMessages: Boolean,
+    val tripId: String = ""
 )

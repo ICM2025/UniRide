@@ -2,6 +2,7 @@ package com.example.uniride.ui.driver.profile
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -10,11 +11,14 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.navigation.fragment.findNavController
-import com.example.uniride.EditProfileActivity
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverProfileBinding
 import java.io.File
@@ -55,29 +59,21 @@ class DriverProfileFragment : Fragment() {
             }
         }
 
-    // Register for activity result to handle the edit profile activity result
     private val editProfileLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.let { data ->
-                // Update profile information
                 currentName = data.getStringExtra("NAME") ?: currentName
                 currentEmail = data.getStringExtra("EMAIL") ?: currentEmail
                 currentPhone = data.getStringExtra("PHONE") ?: currentPhone
 
-                // Update profile picture if one was selected
                 data.getStringExtra("PROFILE_PIC_URI")?.let { uriString ->
                     currentProfilePicUri = Uri.parse(uriString)
                 }
-
-                // Update UI with new information
                 updateProfileUI()
-
-                // Save the updated profile data
                 saveProfileData()
 
-                // Show success message
                 Toast.makeText(requireContext(), "Perfil actualizado", Toast.LENGTH_SHORT).show()
             }
         }
@@ -94,7 +90,6 @@ class DriverProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Configure camera file
         val file = File(requireContext().filesDir, "picFromCamera")
         uriCamera = FileProvider.getUriForFile(
             requireContext(),
@@ -102,10 +97,7 @@ class DriverProfileFragment : Fragment() {
             file
         )
 
-        // Load saved profile data
         loadProfileData()
-
-        // Update UI with current data
         updateProfileUI()
 
         binding.btnBack.setOnClickListener {
@@ -124,12 +116,10 @@ class DriverProfileFragment : Fragment() {
             showImagePickerDialog()
         }
 
-        // Add a click listener for the entire profile section
         binding.btnEditProfile.setOnClickListener {
             launchEditProfileActivity()
         }
 
-        // Add click listener for profile picture to change it directly
         binding.ivProfile.setOnClickListener {
             showImagePickerDialog()
         }
@@ -182,22 +172,98 @@ class DriverProfileFragment : Fragment() {
             Toast.makeText(requireContext(), "Error al guardar la imagen", Toast.LENGTH_SHORT).show()
         }
     }
-
     private fun launchEditProfileActivity() {
-        val intent = Intent(requireContext(), EditProfileActivity::class.java).apply {
-            putExtra("NAME", currentName)
-            putExtra("EMAIL", currentEmail)
-            putExtra("PHONE", currentPhone)
-            // If you want to pass the current image URI
-            currentProfilePicUri?.let { uri ->
-                putExtra("PROFILE_PIC_URI", uri.toString())
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.activity_edit_profile, null)
+
+        val dialog = Dialog(requireContext(), android.R.style.Theme_Material_Light_NoActionBar_Fullscreen)
+        dialog.setContentView(dialogView)
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+
+        // Inicializar los componentes del layout
+        val btnBack = dialogView.findViewById<ImageButton>(R.id.btnBackEditProfile)
+        val ivProfilePic = dialogView.findViewById<ImageView>(R.id.ivProfilePicture)
+        val btnChangePhoto = dialogView.findViewById<Button>(R.id.btnChangePhoto)
+        val etName = dialogView.findViewById<EditText>(R.id.etName)
+        val etEmail = dialogView.findViewById<EditText>(R.id.etEmail)
+        val etPhone = dialogView.findViewById<EditText>(R.id.etPhone)
+        val btnSave = dialogView.findViewById<Button>(R.id.btnSaveProfile)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+
+        // Configurar los valores actuales
+        etName.setText(currentName)
+        etEmail.setText(currentEmail)
+        etPhone.setText(currentPhone)
+
+        // Cargar la imagen de perfil actual
+        currentProfilePicUri?.let { uri ->
+            try {
+                requireContext().contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    ivProfilePic.setImageBitmap(bitmap)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
-        editProfileLauncher.launch(intent)
+
+        // Configurar el botón para cambiar la foto
+        btnChangePhoto.setOnClickListener {
+            showImagePickerDialog()
+            // Actualizar la imagen en el diálogo después de seleccionar una nueva
+            currentProfilePicUri?.let { uri ->
+                try {
+                    requireContext().contentResolver.openInputStream(uri)?.use { inputStream ->
+                        val bitmap = BitmapFactory.decodeStream(inputStream)
+                        ivProfilePic.setImageBitmap(bitmap)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // Configurar el botón de guardar
+        btnSave.setOnClickListener {
+            // Validar los campos
+            val name = etName.text.toString().trim()
+            val email = etEmail.text.toString().trim()
+            val phone = etPhone.text.toString().trim()
+
+            // Validación simple
+            if (name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+                Toast.makeText(requireContext(), "Todos los campos son obligatorios", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Validar formato de email
+            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                Toast.makeText(requireContext(), "El formato del email no es válido", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Actualizar los datos
+            currentName = name
+            currentEmail = email
+            currentPhone = phone
+
+            // Actualizar UI y guardar datos
+            updateProfileUI()
+            saveProfileData()
+
+            // Mostrar mensaje de éxito y cerrar el diálogo
+            Toast.makeText(requireContext(), "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        // Configurar los botones de cancelar y volver
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnBack.setOnClickListener { dialog.dismiss() }
+
+        // Mostrar el diálogo
+        dialog.show()
     }
 
     private fun loadProfileData() {
-        // Here you would load the profile data from SharedPreferences, Database, etc.
         val sharedPrefs = requireActivity().getSharedPreferences("user_profile", Activity.MODE_PRIVATE)
         currentName = sharedPrefs.getString("NAME", "") ?: ""
         currentEmail = sharedPrefs.getString("EMAIL", "") ?: ""
@@ -214,10 +280,8 @@ class DriverProfileFragment : Fragment() {
     }
 
     private fun updateProfileUI() {
-        // Update UI components with current profile data
         binding.tvName?.text = currentName
 
-        // Update profile picture if available
         currentProfilePicUri?.let { uri ->
             try {
                 requireContext().contentResolver.openInputStream(uri)?.use { inputStream ->
@@ -231,7 +295,6 @@ class DriverProfileFragment : Fragment() {
     }
 
     private fun saveProfileData() {
-        // Save profile data to SharedPreferences or your database
         val sharedPrefs = requireActivity().getSharedPreferences("user_profile", Activity.MODE_PRIVATE)
         sharedPrefs.edit().apply {
             putString("NAME", currentName)
@@ -246,7 +309,6 @@ class DriverProfileFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        // Save data when fragment is paused
         saveProfileData()
     }
 

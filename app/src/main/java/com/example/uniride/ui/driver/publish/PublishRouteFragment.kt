@@ -69,7 +69,6 @@ class PublishRouteFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize SharedPreferences
         sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
 
         setupVehicleSpinner()
@@ -94,7 +93,6 @@ class PublishRouteFragment : Fragment() {
             startVoiceRecognition()
         }
 
-        // Listeners para detectar en qué campo está el foco
         binding.inputOrigin.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 activeField = EditTextField.ORIGIN
@@ -172,14 +170,11 @@ class PublishRouteFragment : Fragment() {
 
     private fun setupContinueButton() {
         binding.btnContinue.setOnClickListener {
-            // Get the origin and destination locations
             val originAddress = binding.inputOrigin.text.toString()
             val destinationAddress = binding.inputDestination.text.toString()
 
-            // Clear previous stops
             stopsList.clear()
 
-            // Get all intermediate stops
             for (i in 0 until binding.stopsContainer.childCount) {
                 val stopView = binding.stopsContainer.getChildAt(i)
                 val stopEditText = stopView.findViewById<EditText>(R.id.et_stop)
@@ -188,8 +183,6 @@ class PublishRouteFragment : Fragment() {
                     stopsList.add(stopText)
                 }
             }
-
-            // Save route data to SharedPreferences
             saveRouteData(originAddress, destinationAddress, stopsList)
 
             val activity = requireActivity()
@@ -211,7 +204,6 @@ class PublishRouteFragment : Fragment() {
             Handler(Looper.getMainLooper()).postDelayed({
                 dialog.dismiss()
 
-                // Set result to notify the Driver Home that a route was published
                 activity.setResult(Activity.RESULT_OK)
                 activity.finish()
             }, 1500)
@@ -220,16 +212,21 @@ class PublishRouteFragment : Fragment() {
 
     private fun saveRouteData(origin: String, destination: String, stops: List<String>) {
         val editor = sharedPreferences.edit()
-        editor.putString("ROUTE_ORIGIN", origin)
-        editor.putString("ROUTE_DESTINATION", destination)
-        editor.putInt("ROUTE_STOPS_COUNT", stops.size)
 
-        // Save each stop
+        val tripId = System.currentTimeMillis().toString()
+
+        editor.putString("TRIP_${tripId}_ORIGIN", origin)
+        editor.putString("TRIP_${tripId}_DESTINATION", destination)
+        editor.putInt("TRIP_${tripId}_STOPS_COUNT", stops.size)
+
         stops.forEachIndexed { index, stop ->
-            editor.putString("ROUTE_STOP_$index", stop)
+            editor.putString("TRIP_${tripId}_STOP_$index", stop)
         }
 
-        // Set flag to indicate a route has been published
+        val tripIds = sharedPreferences.getStringSet("SAVED_TRIP_IDS", mutableSetOf()) ?: mutableSetOf()
+        tripIds.add(tripId)
+        editor.putStringSet("SAVED_TRIP_IDS", tripIds)
+
         editor.putBoolean("HAS_PUBLISHED_ROUTE", true)
         editor.putBoolean("HAS_ACTIVE_ROUTE", false)
 
@@ -257,9 +254,6 @@ class PublishRouteFragment : Fragment() {
         btnDelete.setOnClickListener {
             binding.stopsContainer.removeView(stopView)
         }
-
-        // acá luego se añade para el de cambiar de orden
-
         binding.stopsContainer.addView(stopView)
     }
 
@@ -274,15 +268,13 @@ class PublishRouteFragment : Fragment() {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     startVoiceRecognition()
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Permiso de micrófono denegado",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(),"Permiso de micrófono denegado",Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()

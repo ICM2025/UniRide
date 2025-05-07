@@ -6,6 +6,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
@@ -31,6 +35,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
@@ -46,16 +51,21 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     private var _binding: FragmentDriverHomeBinding? = null
     private val binding get() = _binding!!
 
-    // Location components  
+    // Location components
     private lateinit var locationManager: LocationManager
     private val locationPermissionCode = 1001
     private var hasLocationPermission = false
+
+    private lateinit var sensorManager: SensorManager
+    private var lightSensor: Sensor? = null
+    private lateinit var sensorEventListener: SensorEventListener
 
     // Route components
     private var mMap: GoogleMap? = null
     private var routePolyline: Polyline? = null
     private lateinit var geocoder: Geocoder
     private lateinit var sharedPreferences: SharedPreferences
+    private val defaultLocation = LatLng(4.6097, -74.0817) // Bogotá, Colombia
 
     // Location variables
     private var originLocation: LatLng? = null
@@ -68,6 +78,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private var isRouteDisplayed = false
     private var preventLocationCameraUpdate = false
+    private var isInitialLocationSet = false
 
     // Permission launcher
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
@@ -95,36 +106,28 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize shared preferences
         sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
 
-        // Initialize geocoder
         geocoder = Geocoder(requireContext())
 
-        // Register for publish trip launcher
         registerPublishTripLauncher()
 
-        // Set up network policy to allow network on main thread (for demo only)
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
 
-        // Set up location manager
         locationManager = requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        // Set up permission launcher
         setupPermissionLauncher()
+        initializeSensorComponents()
 
-        // Initialize map
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
 
-        // Set up the publish trip button
         binding.btnPublishTrip.setOnClickListener {
             val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
             publishTripLauncher.launch(intent)
         }
 
-        // Check if location permission is already granted
         checkLocationPermission()
     }
 
@@ -139,11 +142,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 enableMyLocation()
             } else {
                 // Permission denied
-                Toast.makeText(
-                    requireContext(),
-                    "La ubicación es necesaria para mostrar tu posición en el mapa",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(requireContext(),"La ubicación es necesaria para mostrar tu posición en el mapa",Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -161,6 +160,39 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
     }
 
+    private fun initializeSensorComponents() {
+        sensorManager = requireActivity().getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+        sensorEventListener = createSensorEventListener()
+    }
+
+    private fun createSensorEventListener(): SensorEventListener {
+        return object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event != null) {
+                    updateMapStyle(event.values[0])
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            }
+        }
+    }
+
+    private fun updateMapStyle(lightValue: Float) {
+        mMap?.let { googleMap ->
+            if (lightValue > 5000) {
+                googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(requireContext(), R.raw.lightmap)
+                )
+            } else {
+                googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(requireContext(), R.raw.darkmap)
+                )
+            }
+        }
+    }
+
     private fun startLocationUpdates() {
         if (hasLocationPermission) {
             try {
@@ -171,12 +203,11 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 ) {
                     locationManager.requestLocationUpdates(
                         LocationManager.GPS_PROVIDER,
-                        5000, // 5 seconds
-                        10f,  // 10 meters
+                        5000,
+                        10f,
                         this
                     )
 
-                    // Get last known location
                     val lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                     if (lastLocation != null) {
                         onLocationChanged(lastLocation)
@@ -184,11 +215,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(
-                    requireContext(),
-                    "Error al iniciar actualizaciones de ubicación: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(requireContext(),"Error al iniciar actualizaciones de ubicación: ${e.message}",Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -201,6 +228,14 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
                 mMap?.isMyLocationEnabled = true
+
+                // Get current location and move camera to it
+                val lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                if (lastLocation != null && !isInitialLocationSet) {
+                    val currentLatLng = LatLng(lastLocation.latitude, lastLocation.longitude)
+                    mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+                    isInitialLocationSet = true
+                }
             }
         }
     }
@@ -210,11 +245,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
             if (result.resultCode == android.app.Activity.RESULT_OK) {
-                loadRouteAndDisplay()
-                updateUIForActiveRoute()
             }
-        }
-    }
+        }}
 
     private fun updateUIForActiveRoute() {
         if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
@@ -226,7 +258,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
 
-        // Configure map UI settings
         googleMap.uiSettings.apply {
             isZoomControlsEnabled = true
             isMapToolbarEnabled = true
@@ -234,56 +265,65 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             isScrollGesturesEnabled = true
             isRotateGesturesEnabled = true
         }
+        mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f))
 
-        // Enable my location if permission is granted
+
+        lightSensor?.let {
+            val currentLightValue = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)?.let { 10000f } ?: 100f
+            updateMapStyle(currentLightValue)
+        }
+
         enableMyLocation()
+        updateUIForActiveRoute()
 
-        // Check if we need to load a saved route
-        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
+        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
             loadRouteAndDisplay()
-            updateUIForActiveRoute()
         }
     }
 
     private fun loadRouteAndDisplay() {
-        val originAddress = sharedPreferences.getString("ROUTE_ORIGIN", null)
-        val destinationAddress = sharedPreferences.getString("ROUTE_DESTINATION", null)
-        val stopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
+        // Solo cargar la ruta si hay una ruta activa, no solo publicada
+        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
+            val originAddress = sharedPreferences.getString("ROUTE_ORIGIN", null)
+            val destinationAddress = sharedPreferences.getString("ROUTE_DESTINATION", null)
+            val stopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
 
-        if (mMap == null) {
-            return
-        }
-
-        stopLocations.clear()
-        routePolyline?.remove()
-
-        mMap?.clear()
-        isRouteDisplayed = false
-
-        if (!originAddress.isNullOrEmpty() && !destinationAddress.isNullOrEmpty()) {
-            originLocation = findLocation(originAddress)
-            destinationLocation = findLocation(destinationAddress)
-
-            for (i in 0 until stopsCount) {
-                val stopAddress = sharedPreferences.getString("ROUTE_STOP_$i", null)
-                if (!stopAddress.isNullOrEmpty()) {
-                    val stopLocation = findLocation(stopAddress)
-                    if (stopLocation != null) {
-                        stopLocations.add(stopLocation)
-                    }
-                }
+            if (mMap == null) {
+                return
             }
 
-            if (originLocation != null && destinationLocation != null) {
-                drawRoute(originLocation!!, destinationLocation!!, stopLocations)
-                preventLocationCameraUpdate = true
-                isRouteDisplayed = true
-            } else {
-                Toast.makeText(requireContext(),"No se pudieron encontrar las ubicaciones",Toast.LENGTH_SHORT).show()
+            stopLocations.clear()
+            routePolyline?.remove()
+
+            mMap?.clear()
+            isRouteDisplayed = false
+
+            if (!originAddress.isNullOrEmpty() && !destinationAddress.isNullOrEmpty()) {
+                originLocation = findLocation(originAddress)
+                destinationLocation = findLocation(destinationAddress)
+
+                for (i in 0 until stopsCount) {
+                    val stopAddress = sharedPreferences.getString("ROUTE_STOP_$i", null)
+                    if (!stopAddress.isNullOrEmpty()) {
+                        val stopLocation = findLocation(stopAddress)
+                        if (stopLocation != null) {
+                            stopLocations.add(stopLocation)
+                        }
+                    }
+                }
+
+                if (originLocation != null && destinationLocation != null) {
+                    drawRoute(originLocation!!, destinationLocation!!, stopLocations)
+                    preventLocationCameraUpdate = true
+                    isRouteDisplayed = true
+                } else {
+                    Toast.makeText(requireContext(),"No se pudieron encontrar las ubicaciones",Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
 
+    //Encuentra la ubicación de una dirección
     private fun findLocation(address: String): LatLng? {
         try {
             val addresses = geocoder.getFromLocationName(address, 2)
@@ -298,21 +338,19 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         return null
     }
 
+    //Dibuja la ruta
     private fun drawRoute(origin: LatLng, destination: LatLng, stops: List<LatLng>) {
         try {
             Toast.makeText(requireContext(), "Obteniendo ruta...", Toast.LENGTH_SHORT).show()
             getDirectionsData(origin, destination, stops)
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(
-                requireContext(),
-                "Error al obtener la ruta: ${e.message}",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(requireContext(),"Error al obtener la ruta: ${e.message}",Toast.LENGTH_SHORT).show()
             isRouteDisplayed = false
         }
     }
 
+    //Obtiene las coordenadas de la ruta
     private fun getDirectionsData(
         origin: LatLng,
         destination: LatLng,
@@ -334,7 +372,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
             urlString += "&key=$DIRECTIONS_API_KEY"
 
-            // Use a separate thread for network operations
+            //Uso de hilo para ejecutar la solicitud en segundo plano
             networkExecutor.execute {
                 try {
                     val url = URL(urlString)
@@ -422,7 +460,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                         .title("Destino")
                 )
 
-                // Add markers for stops
                 stops.forEachIndexed { index, latLng ->
                     mMap?.addMarker(
                         MarkerOptions()
@@ -501,15 +538,14 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     override fun onLocationChanged(location: Location) {
         currentLocation = location
 
-        if (!preventLocationCameraUpdate) {
-            // Move camera to current location
+        if (!preventLocationCameraUpdate && !isInitialLocationSet) {
             val currentLatLng = LatLng(location.latitude, location.longitude)
             mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+            isInitialLocationSet = true
+        }
 
-            // Check if we need to load a saved route
-            if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && !isRouteDisplayed && mMap != null) {
-                loadRouteAndDisplay()
-            }
+        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && !isRouteDisplayed && mMap != null) {
+            loadRouteAndDisplay()
         }
     }
 
@@ -517,24 +553,34 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         super.onResume()
         startLocationUpdates()
 
-        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
-            updateUIForActiveRoute()
+        lightSensor?.let {
+            sensorManager.registerListener(
+                sensorEventListener,
+                it,
+                SensorManager.SENSOR_DELAY_NORMAL
+            )
+        }
+
+        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
             if (!isRouteDisplayed && mMap != null) {
                 loadRouteAndDisplay()
             }
         }
+
+        updateUIForActiveRoute()
     }
 
     override fun onPause() {
         super.onPause()
-        // Stop location updates
         locationManager.removeUpdates(this)
+
+        sensorManager.unregisterListener(sensorEventListener)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Clean up resources
         locationManager.removeUpdates(this)
+        sensorManager.unregisterListener(sensorEventListener)
         _binding = null
     }
 }

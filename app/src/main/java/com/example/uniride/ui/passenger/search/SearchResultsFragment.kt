@@ -76,19 +76,15 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Permitir operaciones de red en el hilo principal (solo para demo)
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
 
-        // Inicializar geocoder
         geocoder = Geocoder(requireContext())
 
-        // Obtener argumentos
         arguments?.let { args ->
             originAddress = args.getString("origin")
             destinationAddress = args.getString("destination")
 
-            // Actualizar texto en la UI con origen y destino
             binding.tvRoute.text = "$originAddress → $destinationAddress"
         }
 
@@ -146,21 +142,17 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun setupBottomSheet() {
-        // Obtener referencia al BottomSheet
         val bottomSheet = view?.findViewById<FrameLayout>(R.id.standard_bottom_sheet)
             ?: return
 
-        // Inicializar el comportamiento
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
 
-        // Configurar el BottomSheet
         bottomSheetBehavior.apply {
             peekHeight = resources.getDimensionPixelSize(R.dimen.bottom_sheet_peek_height)
             state = BottomSheetBehavior.STATE_COLLAPSED
             isDraggable = true
             isHideable = false
 
-            // Callback para manejar cambios de estado
             addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
                 override fun onStateChanged(bottomSheet: View, newState: Int) {
                     when (newState) {
@@ -174,12 +166,10 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                 }
 
                 override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                    // Opcional: Puedes realizar acciones durante el deslizamiento
                 }
             })
         }
 
-        // Hacer que el BottomSheet responda mejor a los gestos táctiles
         bottomSheet.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
                 if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_COLLAPSED) {
@@ -189,7 +179,6 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
             } else false
         }
 
-        // Hacer que la barra de agarre sea interactiva
         val grabber = view?.findViewById<View>(R.id.bottom_sheet_grabber)
         grabber?.setOnClickListener {
             if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_COLLAPSED) {
@@ -239,11 +228,7 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                             .title("Destino: $destination")
                     )
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "No se pudieron encontrar las ubicaciones",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(),"No se pudieron encontrar las ubicaciones",Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -287,11 +272,7 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(
-                requireContext(),
-                "Error al obtener la ruta: ${e.message}",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(requireContext(),"Error al obtener la ruta: ${e.message}",Toast.LENGTH_SHORT).show()
         }
     }
 

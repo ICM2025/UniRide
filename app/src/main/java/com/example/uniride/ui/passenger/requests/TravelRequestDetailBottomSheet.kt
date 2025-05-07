@@ -51,12 +51,10 @@ class RequestDetailBottomSheet(
             is TravelRequestStatus.Pending -> {
                 binding.btnRequest.text = "Cancelar solicitud"
                 binding.btnRequest.visibility = View.VISIBLE
-                // Aquí puedes añadir lógica de cancelación
             }
             is TravelRequestStatus.Rejected -> {
                 binding.btnRequest.text = "Volver a solicitar"
                 binding.btnRequest.visibility = View.VISIBLE
-                // Lógica para reintentar solicitud
             }
             is TravelRequestStatus.Finished -> {
                 binding.btnRequest.visibility = View.GONE
