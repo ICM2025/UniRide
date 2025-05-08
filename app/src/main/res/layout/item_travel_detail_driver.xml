@@ -1,0 +1,145 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_driver_trip_detail"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <ImageView
+            android:id="@+id/iv_vehicle_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_car"
+            android:background="@drawable/bg_circle"
+            android:padding="8dp"
+            android:contentDescription="Ícono de vehículo" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+
+            <TextView
+                android:id="@+id/tv_route"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ruta: UNAL → Santafé"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_color" />
+
+            <TextView
+                android:id="@+id/tv_vehicle_used"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vehículo: Mazda 3 (XYZ123)"
+                android:textSize="14sp"
+                android:textColor="@color/text_color"
+                android:alpha="0.8" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Fecha, hora, precio -->
+    <TextView
+        android:id="@+id/tv_date_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="12 mayo 2025 · 17:45"
+        android:textSize="14sp"
+        android:textColor="@color/text_color"
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:id="@+id/tv_price"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Precio: $11.500"
+        android:textSize="14sp"
+        android:textColor="@color/text_color"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Cupos ocupados -->
+    <TextView
+        android:id="@+id/tv_seats_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Cupos ocupados"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:textColor="@color/text_color" />
+
+    <ProgressBar
+        android:id="@+id/progress_seats"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="12dp"
+        android:progress="75"
+        android:max="100"
+        android:progressTint="@color/main_color"
+        android:layout_marginBottom="12dp"
+        android:layout_marginTop="4dp"
+        android:backgroundTint="#dddddd" />
+
+    <!-- Resumen rápido -->
+    <TextView
+        android:id="@+id/tv_summary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="3 pasajeros aceptados · 2 solicitudes pendientes"
+        android:textSize="14sp"
+        android:textColor="@color/text_color"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Acciones rápidas -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+         android:id="@+id/btn_start_trip"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:text="Empezar"
+         android:textAllCaps="false"
+         android:icon="@drawable/ic_edit"
+         android:iconTint="@color/main_color"
+         android:textColor="@color/main_color"
+         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+         android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_edit_trip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Editar"
+            android:textAllCaps="false"
+            android:icon="@drawable/ic_edit"
+            android:iconTint="@color/main_color"
+            android:textColor="@color/main_color"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel_trip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancelar viaje"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/black"
+            android:textColor="@android:color/white"
+            android:icon="@drawable/ic_xmark"
+            android:iconTint="@android:color/white" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,22 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/driverHomeFragment"
+        android:icon="@drawable/ic_home"
+        android:title="Publicar viaje" />
+
+    <item
+        android:id="@+id/driverTripsFragment"
+        android:icon="@drawable/ic_manage_trips"
+        android:title="Mis viajes" />
+
+    <item
+        android:id="@+id/tripRequestsFragment"
+        android:title="Solicitudes"
+        android:icon="@drawable/ic_requests" />
+
+
+    <item
+        android:id="@+id/switchToPassenger"
+        android:icon="@drawable/ic_passenger"
+        android:title="Modo pasajero" />
+</menu>

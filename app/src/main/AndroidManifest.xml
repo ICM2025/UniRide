@@ -3,8 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
+        android:name=".connection.SupabaseApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -14,95 +18,59 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UniRide"
         tools:targetApi="31">
+        <activity
+            android:name=".ui.driver.drawer.DriverDrawerFlowActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.passenger.drawer.PassengerDrawerFlowActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.driver.publish.PublishTripFlowActivity"
+            android:exported="false" />
+        <!--
+             TODO: Before you run your application, you need a Google Maps API key.
 
-        <!-- Actividades existentes -->
+             To get one, follow the directions here:
+
+                https://developers.google.com/maps/documentation/android-sdk/get-api-key
+
+             Once you have your API key (it starts with "AIza"), define a new property in your
+             project's local.properties file (e.g. MAPS_API_KEY=Aiza...), and replace the
+             "YOUR_API_KEY" string in this file with "${MAPS_API_KEY}".
+        -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
+
         <activity
-            android:name=".MessageActivity"
-            android:exported="false" />
+            android:name=".ui.passenger.search.SearchFlowActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateVisible" />
         <activity
-            android:name=".PassengerRouteInProgressActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverRouteInProgressActivity"
-            android:exported="false" />
-        <activity
-            android:name=".NewPasswordActivity"
-            android:exported="false" />
-        <activity
-            android:name=".RecoverPasswordActivity"
-            android:exported="false" />
-        <activity
-            android:name=".RegisterActivity"
-            android:exported="false" />
-        <activity
-            android:name=".LoginActivity"
-            android:exported="false" />
-        <activity
-            android:name=".InitialActivity"
+            android:name=".ui.auth.AuthActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
         <activity
-            android:name=".PassengerHomeActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverManageTripsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".PassengerSettingsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverProfileActivity"
-            android:exported="false" />
-        <activity
-            android:name=".PassengerProfileActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverHomeActivity"
-            android:exported="false" />
-        <activity
-            android:name=".BottomMenuActivity"
-            android:exported="false" />
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverPassengersListActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverRateActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverDetailsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".DriverAviableActivity"
-            android:exported="false" />
-        <activity
-            android:name=".SearchWheelActivity"
-            android:exported="false" />
-        <!-- Pantalla de "Acerca de" -->
-        <activity
-            android:name=".AcercaDeActivity"
+            android:name=".ui.MainActivity"
             android:exported="false" />
 
-        <!-- Pantalla de "Billetera" -->
-        <activity
-            android:name=".BilleteraActivity"
-            android:exported="false" />
 
-        <!-- Pantalla de "Tarjeta" -->
-        <activity
-            android:name=".TarjetaActivity"
-            android:exported="false" />
-
-        <!-- Pantalla de "InfoTarjeta" -->
-        <activity
-            android:name=".InfoTarjetaActivity"
-            android:exported="false" />
-
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.uniride.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
+
 </manifest>

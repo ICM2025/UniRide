@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_marginBottom="12dp">
+
+    <ImageView
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:src="@drawable/ic_circle_orange"
+        android:layout_marginEnd="8dp" />
+
+    <!-- Campo de texto -->
+    <EditText
+        android:id="@+id/et_stop"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="@drawable/bg_edittext_rounded"
+        android:hint="Agregar parada..."
+        android:paddingHorizontal="16dp"
+        android:textColor="@color/text_color"
+        android:textColorHint="#808080"
+        android:textSize="15sp" />
+
+    <!-- Botón reordenar -->
+    <ImageButton
+        android:id="@+id/btn_move"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:src="@drawable/ic_bars"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Mover parada" />
+
+    <!-- Botón eliminar -->
+    <ImageButton
+        android:id="@+id/btn_delete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/ic_xmark"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Eliminar parada"
+        app:tint="@color/status_rejected" />
+
+</LinearLayout>

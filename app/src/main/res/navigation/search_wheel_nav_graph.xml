@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/search_wheel_nav_graph"
+    app:startDestination="@id/searchInputFragment">
+
+    <fragment
+        android:id="@+id/searchInputFragment"
+        android:name="com.example.uniride.ui.passenger.search.SearchInputFragment"
+        android:label="Buscar Wheels"
+        tools:layout="@layout/fragment_search_input">
+        <action
+            android:id="@+id/action_searchInputFragment_to_searchResultsFragment"
+            app:destination="@id/searchResultsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/searchResultsFragment"
+        android:name="com.example.uniride.ui.passenger.search.SearchResultsFragment"
+        android:label="Resultados"
+        tools:layout="@layout/fragment_search_results">
+        <action
+            android:id="@+id/action_searchResultsFragment_to_travelDetailFragment" />
+    </fragment>
+
+
+</navigation>
