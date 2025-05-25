@@ -10,7 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentTripRequestBinding
 import com.example.uniride.domain.adapter.PassengerRequestsAdapter
-import com.example.uniride.domain.model.PassengerRequest
+import com.example.uniride.domain.model.PassengerRequestOLD
 import com.example.uniride.domain.model.PassengerRequestStatus
 
 class TripRequestsFragment : Fragment() {
@@ -41,7 +41,7 @@ class TripRequestsFragment : Fragment() {
 
     private fun loadPassengerRequests() {
         val requests = listOf(
-            PassengerRequest(
+            PassengerRequestOLD(
                 passengerName = "Camila Torres",
                 destination = "Zona T",
                 status = PassengerRequestStatus.Pending,
@@ -52,7 +52,7 @@ class TripRequestsFragment : Fragment() {
                 rating = 4.8,
                 reviewsCount = 24
             ),
-            PassengerRequest(
+            PassengerRequestOLD(
                 passengerName = "Luis Martínez",
                 destination = "Suba",
                 status = PassengerRequestStatus.Accepted,
@@ -63,7 +63,7 @@ class TripRequestsFragment : Fragment() {
                 rating = 4.6,
                 reviewsCount = 31
             ),
-            PassengerRequest(
+            PassengerRequestOLD(
                 passengerName = "Andrea Gómez",
                 destination = "Titan Plaza",
                 status = PassengerRequestStatus.Rejected,
@@ -92,8 +92,8 @@ class TripRequestsFragment : Fragment() {
         binding.rvPassengerRequests.adapter = adapter
     }
 
-    private fun showPassengerDetails(request: PassengerRequest) {
-        val details = PassengerRequest(
+    private fun showPassengerDetails(request: PassengerRequestOLD) {
+        val details = PassengerRequestOLD(
             passengerName = request.passengerName,
             university = request.university,
             email = request.email,
