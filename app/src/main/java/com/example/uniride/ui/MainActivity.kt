@@ -1,9 +1,14 @@
 package com.example.uniride.ui
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -14,19 +19,12 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.uniride.R
 import com.example.uniride.databinding.ActivityMainBinding
 import com.example.uniride.domain.model.DrawerOption
+import com.example.uniride.ui.auth.AuthActivity
 import com.example.uniride.ui.driver.drawer.DriverDrawerFlowActivity
 import com.example.uniride.ui.passenger.drawer.PassengerDrawerFlowActivity
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import android.content.Context
-import android.content.SharedPreferences
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.util.Log
-import android.widget.Toast
-import com.example.uniride.connection.SupabaseInstance
-import com.example.uniride.ui.auth.AuthActivity
-import io.github.jan.supabase.auth.auth
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity() {
@@ -157,27 +155,12 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 DrawerOption.Logout.id -> {
-                    lifecycleScope.launch{
-                        SupabaseInstance.client.auth.signOut()
-                    }
-                    // Borrar credenciales guardadas
-                    val masterKey = androidx.security.crypto.MasterKey.Builder(this)
-                        .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
-                        .build()
-
-                    val securePrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
-                        this,
-                        "secure_user_prefs",
-                        masterKey,
-                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                        androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                    )
-
-                    securePrefs.edit().clear().apply()
+                    FirebaseAuth.getInstance().signOut()
                     startActivity(Intent(this, AuthActivity::class.java))
                     finish()
                     return@setNavigationItemSelectedListener true
                 }
+
 
                 else -> return@setNavigationItemSelectedListener false
             }
