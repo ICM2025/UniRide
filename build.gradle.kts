@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.kapt) apply false
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.safearfs.navigation) apply false
+    alias(libs.plugins.google.gms.google.services) apply false
 }
 
 buildscript {
