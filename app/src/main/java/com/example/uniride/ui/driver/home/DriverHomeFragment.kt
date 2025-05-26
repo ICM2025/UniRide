@@ -190,6 +190,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         locationManager = requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         setupPermissionLauncher()
+        isInitialLocationSet = false
+        preventLocationCameraUpdate = false
         initializeSensorComponents()
 
         val supportMapFragment = mapFragment as? SupportMapFragment
@@ -303,14 +305,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
                 mMap?.isMyLocationEnabled = true
-
-                // Get current location and move camera to it
-                val lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                if (lastLocation != null && !isInitialLocationSet) {
-                    val currentLatLng = LatLng(lastLocation.latitude, lastLocation.longitude)
-                    mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
-                    isInitialLocationSet = true
-                }
+                getCurrentLocationAndCenter()
             }
         }
     }
@@ -349,6 +344,12 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
 
         enableMyLocation()
+        if (hasLocationPermission) {
+            getCurrentLocationAndCenter()
+        } else {
+            // Si no hay permisos, usar ubicación por defecto
+            mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f))
+        }
         updateUIForActiveRoute()
 
         if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
@@ -624,8 +625,46 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
     }
 
+    private fun getCurrentLocationAndCenter() {
+        if (ActivityCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            try {
+                val lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+
+                if (lastLocation != null) {
+                    val currentLatLng = LatLng(lastLocation.latitude, lastLocation.longitude)
+                    mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+                    isInitialLocationSet = true
+                    currentLocation = lastLocation
+                } else {
+                    // Si no hay última ubicación conocida, solicitar una nueva
+                    locationManager.requestSingleUpdate(
+                        LocationManager.GPS_PROVIDER,
+                        object : LocationListener {
+                            override fun onLocationChanged(location: Location) {
+                                val currentLatLng = LatLng(location.latitude, location.longitude)
+                                mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
+                                isInitialLocationSet = true
+                                currentLocation = location
+                            }
+                        },
+                        null
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("DriverHomeFragment", "Error getting current location: ${e.message}")
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        isInitialLocationSet = false
         startLocationUpdates()
 
         lightSensor?.let {
@@ -634,6 +673,10 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 it,
                 SensorManager.SENSOR_DELAY_NORMAL
             )
+        }
+
+        if (hasLocationPermission && mMap != null) {
+            getCurrentLocationAndCenter()
         }
 
         if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
