@@ -9,7 +9,11 @@
         android:id="@+id/driverHomeFragment"
         android:name="com.example.uniride.ui.driver.home.DriverHomeFragment"
         android:label="Publicar viaje"
-        tools:layout="@layout/fragment_driver_home" />
+        tools:layout="@layout/fragment_driver_home" >
+        <action
+            android:id="@+id/action_driverHomeFragment_to_registerDriverFragment"
+            app:destination="@id/registerDriverFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/driverTripsFragment"
@@ -21,4 +25,12 @@
         android:name="com.example.uniride.ui.driver.trips.TripRequestsFragment"
         android:label="fragment_trip_request"
         tools:layout="@layout/fragment_trip_request" />
+    <fragment
+        android:id="@+id/registerDriverFragment"
+        android:name="com.example.uniride.ui.driver.home.RegisterDriverFragment"
+        android:label="RegisterDriverFragment" >
+        <action
+            android:id="@+id/action_registerDriverFragment_to_driverHomeFragment"
+            app:destination="@id/driverHomeFragment" />
+    </fragment>
 </navigation>

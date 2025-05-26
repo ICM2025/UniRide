@@ -238,4 +238,9 @@ class MainActivity : AppCompatActivity() {
         sensorManager.unregisterListener(sensorListener)
     }
 
+    fun switchToPassengerMode() {
+        viewModel.switchToPassenger()
+    }
+
+
 }

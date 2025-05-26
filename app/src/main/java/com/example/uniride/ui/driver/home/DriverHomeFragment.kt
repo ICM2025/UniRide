@@ -20,14 +20,19 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverHomeBinding
+import com.example.uniride.ui.MainActivity
 import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -39,6 +44,9 @@ import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -106,10 +114,74 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // inicialmente se oculta todo para primero verificar si está registrado como conductor
+        binding.btnPublishTrip.visibility = View.GONE
+        val mapFragment = childFragmentManager.findFragmentById(R.id.map)
+        mapFragment?.view?.visibility = View.GONE
+        val promptContainer = binding.root.findViewById<View>(R.id.registerPromptContainer)
+        promptContainer.visibility = View.GONE
+
+        // oculta el menú de navegación inferior
+        requireActivity().findViewById<BottomNavigationView>(R.id.bottom_nav)
+            ?.visibility = View.GONE
+
+        // oculta el botón del menú lateral
+        requireActivity().findViewById<ImageButton>(R.id.btn_menu)?.visibility = View.GONE
+
+
+
+
+        // verificación de si es conductor
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("drivers").document(uid).get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    // si es conductor se muestran los componentes de home
+                    binding.btnPublishTrip.visibility = View.VISIBLE
+                    mapFragment?.view?.visibility = View.VISIBLE
+
+                    // mostrar el menú inferior
+                    requireActivity().findViewById<BottomNavigationView>(R.id.bottom_nav)
+                        ?.visibility = View.VISIBLE
+
+                    // mostrar botón del menú lateral
+                    requireActivity().findViewById<ImageButton>(R.id.btn_menu)
+                        ?.visibility = View.VISIBLE
+
+
+                } else {
+                    // si no es se muestra el layout de registro
+                    promptContainer.visibility = View.VISIBLE
+                    //navegar a registrarse como conductor
+                    val btnRegisterDriver = promptContainer.findViewById<Button>(R.id.btnGoToRegisterDriver)
+                    btnRegisterDriver.setOnClickListener {
+                        findNavController().navigate(R.id.action_driverHomeFragment_to_registerDriverFragment)
+                    }
+
+                    //volver al menú de pasajero
+                    val btnReturn = promptContainer.findViewById<Button>(R.id.btnReturnToPassenger)
+                    btnReturn.setOnClickListener {
+                        requireActivity().findViewById<BottomNavigationView>(R.id.bottom_nav)
+                            ?.visibility = View.VISIBLE
+
+                        // mostrar botón del menú lateral
+                        requireActivity().findViewById<ImageButton>(R.id.btn_menu)
+                            ?.visibility = View.VISIBLE
+                        (activity as? MainActivity)?.switchToPassengerMode()
+                    }
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al verificar rol de conductor",
+                    Toast.LENGTH_SHORT).show()
+            }
+
+
+        //flujo para mapa, ubicación y permisos
         sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
-
         geocoder = Geocoder(requireContext())
-
         registerPublishTripLauncher()
 
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
@@ -120,8 +192,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         setupPermissionLauncher()
         initializeSensorComponents()
 
-        val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
-        mapFragment?.getMapAsync(this)
+        val supportMapFragment = mapFragment as? SupportMapFragment
+        supportMapFragment?.getMapAsync(this)
 
         binding.btnPublishTrip.setOnClickListener {
             val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
@@ -129,7 +201,10 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
 
         checkLocationPermission()
+
+
     }
+
 
     private fun setupPermissionLauncher() {
         requestPermissionLauncher = registerForActivityResult(
