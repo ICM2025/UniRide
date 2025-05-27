@@ -84,31 +84,43 @@ class PublishRouteFragment : Fragment() {
         binding.btnAddStop.setOnClickListener {
             addNewStopField()
         }
-
-        if (isEditing && !editingTripId.isNullOrEmpty()) {
-            loadTripDataForEditing()
-            binding.btnContinue.text = "Guardar cambios"
-        }
     }
 
     private fun checkEditMode() {
+        // Verificar si venimos del intent de la activity
         val intent = requireActivity().intent
-        isEditing = intent.getBooleanExtra("EDIT_MODE", false)
+        val isEditingFromIntent = intent.getBooleanExtra("IS_EDITING", false)
+
+        // También verificar SharedPreferences
+        val isEditingFromPrefs = sharedPreferences.getBoolean("IS_EDITING_TRIP", false)
+
+        isEditing = isEditingFromIntent || isEditingFromPrefs
 
         if (isEditing) {
-            editingTripId = sharedPreferences.getString("EDIT_TRIP_ID", null)
-            loadTripDataForEditing()
-            binding.btnContinue.text = "Actualizar viaje"
+            // Obtener el tripId del intent o SharedPreferences
+            editingTripId = intent.getStringExtra("TRIP_ID")
+                ?: sharedPreferences.getString("EDITING_TRIP_ID", null)
+
+            if (!editingTripId.isNullOrEmpty()) {
+                loadTripDataForEditing()
+                binding.btnContinue.text = "Actualizar viaje"
+            }
         }
     }
 
     private fun loadTripDataForEditing() {
         editingTripId?.let { tripId ->
-            // Cargar datos del viaje a editar
-            val origin = sharedPreferences.getString("EDIT_ORIGIN", "")
-            val destination = sharedPreferences.getString("EDIT_DESTINATION", "")
-            val stopsCount = sharedPreferences.getInt("EDIT_STOPS_COUNT", 0)
+            // Cargar datos del viaje a editar usando las claves correctas
+            val origin = sharedPreferences.getString("EDIT_ROUTE_ORIGIN", "")
+                ?: sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "")
 
+            val destination = sharedPreferences.getString("EDIT_ROUTE_DESTINATION", "")
+                ?: sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "")
+
+            val stopsCount = sharedPreferences.getInt("EDIT_ROUTE_STOPS_COUNT", 0).takeIf { it > 0 }
+                ?: sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
+
+            // Establecer los valores en los campos de texto
             binding.inputOrigin.setText(origin)
             binding.inputDestination.setText(destination)
 
@@ -118,7 +130,9 @@ class PublishRouteFragment : Fragment() {
 
             // Cargar paradas existentes
             for (i in 0 until stopsCount) {
-                val stop = sharedPreferences.getString("EDIT_STOP_$i", "")
+                val stop = sharedPreferences.getString("EDIT_ROUTE_STOP_$i", "")
+                    ?: sharedPreferences.getString("TRIP_${tripId}_STOP_$i", "")
+
                 if (!stop.isNullOrEmpty()) {
                     addNewStopField()
                     val lastStopView = binding.stopsContainer.getChildAt(binding.stopsContainer.childCount - 1)
@@ -127,8 +141,8 @@ class PublishRouteFragment : Fragment() {
                 }
             }
 
-            // Si no hay paradas, agregar un campo vacío
-            if (stopsCount == 0) {
+            // Si no hay paradas, agregar un campo vacío por defecto
+            if (binding.stopsContainer.childCount == 0) {
                 addNewStopField()
             }
         }
@@ -223,16 +237,16 @@ class PublishRouteFragment : Fragment() {
 
     private fun setupContinueButton() {
         binding.btnContinue.setOnClickListener {
-            val originAddress = binding.inputOrigin.text.toString()
-            val destinationAddress = binding.inputDestination.text.toString()
+            val originAddress = binding.inputOrigin.text.toString().trim()
+            val destinationAddress = binding.inputDestination.text.toString().trim()
 
             if (originAddress.isEmpty() || destinationAddress.isEmpty()) {
                 Toast.makeText(requireContext(), "Por favor completa origen y destino", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
+            // Recopilar paradas
             stopsList.clear()
-
             for (i in 0 until binding.stopsContainer.childCount) {
                 val stopView = binding.stopsContainer.getChildAt(i)
                 val stopEditText = stopView.findViewById<EditText>(R.id.et_stop)
@@ -249,7 +263,6 @@ class PublishRouteFragment : Fragment() {
             }
 
             val activity = requireActivity()
-
             val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
 
             val successText = if (isEditing) "¡Viaje actualizado!" else "¡Viaje publicado!"
@@ -268,7 +281,6 @@ class PublishRouteFragment : Fragment() {
 
             Handler(Looper.getMainLooper()).postDelayed({
                 dialog.dismiss()
-
                 activity.setResult(Activity.RESULT_OK)
                 activity.finish()
             }, 1500)
@@ -278,11 +290,8 @@ class PublishRouteFragment : Fragment() {
     private fun saveRouteData(origin: String, destination: String, stops: List<String>) {
         val editor = sharedPreferences.edit()
 
-        val tripId = if (isEditing && editingTripId != null) {
-            editingTripId!!
-        } else {
-            System.currentTimeMillis().toString()
-        }
+        // Generar nuevo ID para viaje nuevo
+        val tripId = System.currentTimeMillis().toString()
 
         editor.putString("TRIP_${tripId}_ORIGIN", origin)
         editor.putString("TRIP_${tripId}_DESTINATION", destination)
@@ -292,26 +301,11 @@ class PublishRouteFragment : Fragment() {
             editor.putString("TRIP_${tripId}_STOP_$index", stop)
         }
 
-        if (!isEditing) {
-            val tripIds = sharedPreferences.getStringSet("SAVED_TRIP_IDS", mutableSetOf()) ?: mutableSetOf()
-            tripIds.add(tripId)
-            editor.putStringSet("SAVED_TRIP_IDS", tripIds)
-            editor.putBoolean("HAS_PUBLISHED_ROUTE", true)
-        }
-
-        editor.putBoolean("HAS_ACTIVE_ROUTE", false)
-
-        // Limpiar datos temporales de edición
-        if (isEditing) {
-            editor.remove("EDIT_TRIP_ID")
-            editor.remove("EDIT_ORIGIN")
-            editor.remove("EDIT_DESTINATION")
-            editor.remove("EDIT_STOPS_COUNT")
-            val editStopsCount = sharedPreferences.getInt("EDIT_STOPS_COUNT", 0)
-            for (i in 0 until editStopsCount) {
-                editor.remove("EDIT_STOP_$i")
-            }
-        }
+        // Agregar a la lista de viajes guardados
+        val tripIds = sharedPreferences.getStringSet("SAVED_TRIP_IDS", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+        tripIds.add(tripId)
+        editor.putStringSet("SAVED_TRIP_IDS", tripIds)
+        editor.putBoolean("HAS_PUBLISHED_ROUTE", true)
 
         editor.apply()
     }
@@ -320,13 +314,13 @@ class PublishRouteFragment : Fragment() {
         editingTripId?.let { tripId ->
             val editor = sharedPreferences.edit()
 
-            // Eliminar las paradas anteriores
+            // Limpiar paradas anteriores
             val oldStopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
             for (i in 0 until oldStopsCount) {
                 editor.remove("TRIP_${tripId}_STOP_$i")
             }
 
-            // Actualizar los datos
+            // Actualizar los datos del viaje existente
             editor.putString("TRIP_${tripId}_ORIGIN", origin)
             editor.putString("TRIP_${tripId}_DESTINATION", destination)
             editor.putInt("TRIP_${tripId}_STOPS_COUNT", stops.size)
@@ -336,10 +330,8 @@ class PublishRouteFragment : Fragment() {
             }
 
             // Si este viaje es el activo, actualizar también las rutas activas
-            val activeOrigin = sharedPreferences.getString("ROUTE_ORIGIN", "")
-            val oldOrigin = sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "")
-
-            if (activeOrigin == oldOrigin) {
+            val activeTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
+            if (activeTripId == tripId) {
                 editor.putString("ROUTE_ORIGIN", origin)
                 editor.putString("ROUTE_DESTINATION", destination)
                 editor.putInt("ROUTE_STOPS_COUNT", stops.size)
@@ -356,6 +348,18 @@ class PublishRouteFragment : Fragment() {
                 }
             }
 
+            // Limpiar datos temporales de edición
+            editor.remove("IS_EDITING_TRIP")
+            editor.remove("EDITING_TRIP_ID")
+            editor.remove("EDIT_ROUTE_ORIGIN")
+            editor.remove("EDIT_ROUTE_DESTINATION")
+            editor.remove("EDIT_ROUTE_STOPS_COUNT")
+
+            val editStopsCount = sharedPreferences.getInt("EDIT_ROUTE_STOPS_COUNT", 0)
+            for (i in 0 until editStopsCount) {
+                editor.remove("EDIT_ROUTE_STOP_$i")
+            }
+
             editor.apply()
         }
     }
@@ -370,7 +374,10 @@ class PublishRouteFragment : Fragment() {
     }
 
     private fun initStopFields() {
-        addNewStopField() // primer campo por defecto
+        // Solo agregar un campo si no estamos editando o si no hay paradas cargadas
+        if (!isEditing || binding.stopsContainer.childCount == 0) {
+            addNewStopField()
+        }
     }
 
     private fun addNewStopField() {
@@ -400,8 +407,6 @@ class PublishRouteFragment : Fragment() {
             }
         }
     }
-
-
 
     override fun onDestroyView() {
         super.onDestroyView()

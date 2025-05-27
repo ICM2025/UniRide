@@ -118,31 +118,36 @@ class DriverTripDetailBottomSheet(
     private fun editTrip() {
         val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
-
         val tripId = trip.tripId
 
-        // Marcar que estamos editando este viaje específico
+        // Preparar los datos para edición - usar las claves que el PublishRouteFragment espera
         editor.putString("EDITING_TRIP_ID", tripId)
         editor.putBoolean("IS_EDITING_TRIP", true)
 
-        // Copiar los datos del viaje que se va a editar a las claves temporales
-        editor.putString("EDIT_ROUTE_ORIGIN", sharedPreferences.getString("TRIP_${tripId}_ORIGIN", ""))
-        editor.putString("EDIT_ROUTE_DESTINATION", sharedPreferences.getString("TRIP_${tripId}_DESTINATION", ""))
-        editor.putInt("EDIT_ROUTE_STOPS_COUNT", sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0))
-
+        // Copiar los datos del viaje que se va a editar a las claves temporales correctas
+        val origin = sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "") ?: ""
+        val destination = sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "") ?: ""
         val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
+
+        editor.putString("EDIT_ROUTE_ORIGIN", origin)
+        editor.putString("EDIT_ROUTE_DESTINATION", destination)
+        editor.putInt("EDIT_ROUTE_STOPS_COUNT", stopsCount)
+
+        // Copiar todas las paradas
         for (i in 0 until stopsCount) {
-            editor.putString("EDIT_ROUTE_STOP_$i", sharedPreferences.getString("TRIP_${tripId}_STOP_$i", ""))
+            val stop = sharedPreferences.getString("TRIP_${tripId}_STOP_$i", "") ?: ""
+            editor.putString("EDIT_ROUTE_STOP_$i", stop)
         }
 
         editor.apply()
 
-        // Navegar a la actividad de edición
+        // Crear intent con la información necesaria
         val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
         intent.putExtra("IS_EDITING", true)
         intent.putExtra("TRIP_ID", tripId)
-        startActivity(intent)
 
+        // Iniciar la actividad y cerrar el bottom sheet
+        startActivity(intent)
         dismiss()
     }
 
@@ -196,6 +201,18 @@ class DriverTripDetailBottomSheet(
         // Si no hay más viajes, marcar que no hay rutas publicadas
         if (tripIds.isEmpty()) {
             editor.putBoolean("HAS_PUBLISHED_ROUTE", false)
+        }
+
+        // Limpiar datos temporales de edición si existen
+        editor.remove("IS_EDITING_TRIP")
+        editor.remove("EDITING_TRIP_ID")
+        editor.remove("EDIT_ROUTE_ORIGIN")
+        editor.remove("EDIT_ROUTE_DESTINATION")
+        editor.remove("EDIT_ROUTE_STOPS_COUNT")
+
+        val editStopsCount = sharedPreferences.getInt("EDIT_ROUTE_STOPS_COUNT", 0)
+        for (i in 0 until editStopsCount) {
+            editor.remove("EDIT_ROUTE_STOP_$i")
         }
 
         editor.apply()
