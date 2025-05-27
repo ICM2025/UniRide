@@ -15,7 +15,6 @@ import com.example.uniride.domain.model.DriverTripItem
 import com.example.uniride.domain.model.TravelOption
 import java.time.LocalDate
 
-
 class DriverTripsFragment : Fragment() {
 
     private var _binding: FragmentDriverTripsBinding? = null
@@ -35,6 +34,11 @@ class DriverTripsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupRecyclerView()
+        loadTrips()
+    }
+
+    override fun onResume() {
+        super.onResume()
         loadTrips()
     }
 
@@ -62,7 +66,8 @@ class DriverTripsFragment : Fragment() {
                 acceptedCount = 4,
                 pendingCount = 2,
                 hasNewMessages = true,
-                isFull = false
+                isFull = false,
+                tripId = "sample_trip_1"
             ),
             DriverTripItem(
                 travelOption = TravelOption(
@@ -81,18 +86,27 @@ class DriverTripsFragment : Fragment() {
                 acceptedCount = 3,
                 pendingCount = 0,
                 hasNewMessages = false,
-                isFull = true
+                isFull = true,
+                tripId = "sample_trip_2"
             )
         )
 
         val allTrips = savedTrips + sampleTrips
 
         adapter = DriverTripsAdapter(allTrips) { selectedTrip ->
-            val bottomSheet = DriverTripDetailBottomSheet(selectedTrip)
+            val bottomSheet = DriverTripDetailBottomSheet(selectedTrip) {
+                // Callback para actualizar la lista cuando se modifique un viaje
+                loadTrips()
+            }
             bottomSheet.show(parentFragmentManager, "TravelDetail")
         }
 
         binding.rvDriverTrips.adapter = adapter
+
+        // Mostrar mensaje si no hay viajes
+        if (allTrips.isEmpty()) {
+            // Aquí puedes mostrar un mensaje de "no hay viajes" si lo deseas
+        }
     }
 
     private fun loadTripsFromSharedPreferences(): List<DriverTripItem> {
@@ -106,33 +120,41 @@ class DriverTripsFragment : Fragment() {
             val origin = sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "") ?: ""
             val destination = sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "") ?: ""
 
-            val trip = DriverTripItem(
-                travelOption = TravelOption(
-                    driverName = "Tú",
-                    description = "Viaje programado",
-                    price = 15000,
-                    driverImage = R.drawable.ic_profile,
-                    drawableResId = R.drawable.ic_car,
-                    availableSeats = 4,
-                    origin = origin,
-                    destination = destination,
-                    departureTime = "08:00",
-                    intermediateStops = getIntermediateStopsFromPrefs(sharedPreferences, tripId),
-                    travelDate = LocalDate.now()
-                ),
-                acceptedCount = 0,
-                pendingCount = 0,
-                hasNewMessages = false,
-                isFull = false,
-                tripId = tripId
-            )
+            if (origin.isNotEmpty() && destination.isNotEmpty()) {
+                val intermediateStops = getIntermediateStopsFromPrefs(sharedPreferences, tripId)
+                val isActiveTrip = sharedPreferences.getString("ACTIVE_TRIP_ID", "") == tripId
 
-            trips.add(trip)
+                val trip = DriverTripItem(
+                    travelOption = TravelOption(
+                        driverName = "Tú",
+                        description = if (isActiveTrip) "Viaje en curso" else "Viaje programado",
+                        price = 15000,
+                        driverImage = R.drawable.ic_profile,
+                        drawableResId = R.drawable.ic_car,
+                        availableSeats = 4,
+                        origin = origin,
+                        destination = destination,
+                        departureTime = "08:00",
+                        intermediateStops = intermediateStops,
+                        travelDate = LocalDate.now()
+                    ),
+                    acceptedCount = if (isActiveTrip) 2 else 0, // Ejemplo de datos
+                    pendingCount = if (isActiveTrip) 1 else 0,
+                    hasNewMessages = isActiveTrip,
+                    isFull = false,
+                    tripId = tripId
+                )
+
+                trips.add(trip)
+            }
         }
 
         return trips
     }
 
+    fun reloadTrips() {
+        loadTrips()
+    }
 
     private fun getIntermediateStopsFromPrefs(sharedPreferences: SharedPreferences, tripId: String): List<String> {
         val stops = mutableListOf<String>()
@@ -147,7 +169,6 @@ class DriverTripsFragment : Fragment() {
 
         return stops
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()

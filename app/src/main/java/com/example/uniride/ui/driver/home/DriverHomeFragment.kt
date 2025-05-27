@@ -683,6 +683,13 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             if (!isRouteDisplayed && mMap != null) {
                 loadRouteAndDisplay()
             }
+        }else {
+            // Si no hay ruta activa, limpiar el mapa
+            mMap?.clear()
+            routePolyline?.remove()
+            routePolyline = null
+            isRouteDisplayed = false
+            preventLocationCameraUpdate = false
         }
 
         updateUIForActiveRoute()
