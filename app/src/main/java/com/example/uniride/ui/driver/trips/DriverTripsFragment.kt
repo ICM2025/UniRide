@@ -14,6 +14,10 @@ import com.example.uniride.domain.adapter.DriverTripsAdapter
 import com.example.uniride.domain.model.DriverTripItem
 import com.example.uniride.domain.model.TravelOption
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.text.SimpleDateFormat
+import java.util.*
 
 class DriverTripsFragment : Fragment() {
 
@@ -119,10 +123,27 @@ class DriverTripsFragment : Fragment() {
         for (tripId in tripIds) {
             val origin = sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "") ?: ""
             val destination = sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "") ?: ""
+            val date = sharedPreferences.getString("TRIP_${tripId}_DATE", "") ?: ""
+            val time = sharedPreferences.getString("TRIP_${tripId}_TIME", "") ?: ""
 
             if (origin.isNotEmpty() && destination.isNotEmpty()) {
                 val intermediateStops = getIntermediateStopsFromPrefs(sharedPreferences, tripId)
                 val isActiveTrip = sharedPreferences.getString("ACTIVE_TRIP_ID", "") == tripId
+
+                // Convertir fecha si está disponible
+                val travelDate = if (date.isNotEmpty()) {
+                    try {
+                        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.getDefault())
+                        LocalDate.parse(date, formatter)
+                    } catch (e: Exception) {
+                        LocalDate.now()
+                    }
+                } else {
+                    LocalDate.now()
+                }
+
+                // Usar tiempo guardado o tiempo por defecto
+                val departureTime = if (time.isNotEmpty()) time else "08:00"
 
                 val trip = DriverTripItem(
                     travelOption = TravelOption(
@@ -134,9 +155,9 @@ class DriverTripsFragment : Fragment() {
                         availableSeats = 4,
                         origin = origin,
                         destination = destination,
-                        departureTime = "08:00",
+                        departureTime = departureTime,
                         intermediateStops = intermediateStops,
-                        travelDate = LocalDate.now()
+                        travelDate = travelDate
                     ),
                     acceptedCount = if (isActiveTrip) 2 else 0, // Ejemplo de datos
                     pendingCount = if (isActiveTrip) 1 else 0,

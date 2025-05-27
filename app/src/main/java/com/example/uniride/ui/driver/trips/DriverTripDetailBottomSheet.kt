@@ -12,12 +12,16 @@ import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.domain.model.DriverTripItem
 import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class DriverTripDetailBottomSheet(
     private val trip: DriverTripItem,
@@ -48,11 +52,78 @@ class DriverTripDetailBottomSheet(
         tvSummary.text = "${trip.acceptedCount} pasajeros aceptados · ${trip.pendingCount} pendientes"
 
         setupButtons(view)
+        updateStartButtonState(view)
+    }
+
+    private fun updateStartButtonState(view: View) {
+        val btnStartTrip = view.findViewById<MaterialButton>(R.id.btn_start_trip)
+        val minutesToDeparture = calculateMinutesToDeparture()
+
+        when {
+            // Ya está activo
+            isActiveTrip() -> {
+                btnStartTrip.text = "Viaje en curso"
+                btnStartTrip.isEnabled = false
+                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_accepted))
+            }
+            // Puede iniciarse (menos de 10 minutos)
+            minutesToDeparture in 0..10 -> {
+                btnStartTrip.text = "Iniciar viaje"
+                btnStartTrip.isEnabled = true
+                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
+            }
+            // Muy temprano para iniciar
+            minutesToDeparture > 10 -> {
+                btnStartTrip.text = "Inicia en ${minutesToDeparture} min"
+                btnStartTrip.isEnabled = false
+                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
+            }
+            // Viaje vencido
+            else -> {
+                btnStartTrip.text = "Viaje vencido"
+                btnStartTrip.isEnabled = false
+                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_rejected))
+            }
+        }
+    }
+
+    private fun calculateMinutesToDeparture(): Long {
+        return try {
+            val time = LocalTime.parse(trip.travelOption.departureTime, DateTimeFormatter.ofPattern("HH:mm"))
+            val departureDateTime = LocalDateTime.of(trip.travelOption.travelDate, time)
+            val now = LocalDateTime.now()
+
+            val duration = java.time.Duration.between(now, departureDateTime)
+            duration.toMinutes()
+        } catch (e: Exception) {
+            Long.MAX_VALUE
+        }
+    }
+
+    private fun isActiveTrip(): Boolean {
+        val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
+        val activeTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
+        return activeTripId == trip.tripId
     }
 
     private fun setupButtons(view: View) {
         view.findViewById<MaterialButton>(R.id.btn_start_trip).setOnClickListener {
-            startTrip()
+            val minutesToDeparture = calculateMinutesToDeparture()
+
+            when {
+                isActiveTrip() -> {
+                    Toast.makeText(requireContext(), "Este viaje ya está en curso", Toast.LENGTH_SHORT).show()
+                }
+                minutesToDeparture in 0..10 -> {
+                    startTrip()
+                }
+                minutesToDeparture > 10 -> {
+                    showEarlyStartDialog(minutesToDeparture)
+                }
+                else -> {
+                    Toast.makeText(requireContext(), "Este viaje ya no se puede iniciar", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         view.findViewById<MaterialButton>(R.id.btn_edit_trip).setOnClickListener {
@@ -64,11 +135,44 @@ class DriverTripDetailBottomSheet(
         }
     }
 
+    private fun showEarlyStartDialog(minutesToDeparture: Long) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Iniciar viaje temprano")
+            .setMessage("El viaje está programado para iniciar en $minutesToDeparture minutos. ¿Estás seguro de que quieres iniciarlo ahora?")
+            .setPositiveButton("Sí, iniciar ahora") { _, _ ->
+                startTrip()
+            }
+            .setNegativeButton("Esperar") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
     private fun startTrip() {
         val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
 
         val tripId = trip.tripId
+
+        // Verificar si ya hay un viaje activo
+        val currentActiveTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
+        if (!currentActiveTripId.isNullOrEmpty() && currentActiveTripId != tripId) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Viaje activo")
+                .setMessage("Ya tienes un viaje en curso. ¿Quieres finalizarlo e iniciar este nuevo viaje?")
+                .setPositiveButton("Sí, cambiar viaje") { _, _ ->
+                    proceedToStartTrip(editor, tripId)
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+            return
+        }
+
+        proceedToStartTrip(editor, tripId)
+    }
+
+    private fun proceedToStartTrip(editor: android.content.SharedPreferences.Editor, tripId: String) {
+        val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
 
         // Marcar esta ruta como activa
         editor.putBoolean("HAS_ACTIVE_ROUTE", true)
@@ -78,12 +182,17 @@ class DriverTripDetailBottomSheet(
         editor.putString("ROUTE_ORIGIN", sharedPreferences.getString("TRIP_${tripId}_ORIGIN", ""))
         editor.putString("ROUTE_DESTINATION", sharedPreferences.getString("TRIP_${tripId}_DESTINATION", ""))
         editor.putInt("ROUTE_STOPS_COUNT", sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0))
+        editor.putLong("ROUTE_DATETIME", sharedPreferences.getLong("TRIP_${tripId}_DATETIME", System.currentTimeMillis())) // Nueva línea
 
         // Copiar cada parada
         val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
         for (i in 0 until stopsCount) {
             editor.putString("ROUTE_STOP_$i", sharedPreferences.getString("TRIP_${tripId}_STOP_$i", ""))
         }
+
+        // Guardar hora de inicio real
+        editor.putString("TRIP_${tripId}_ACTUAL_START_TIME",
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")))
 
         editor.apply()
 
@@ -116,6 +225,12 @@ class DriverTripDetailBottomSheet(
     }
 
     private fun editTrip() {
+        // No permitir editar viajes activos
+        if (isActiveTrip()) {
+            Toast.makeText(requireContext(), "No puedes editar un viaje que está en curso", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         val tripId = trip.tripId
@@ -128,10 +243,12 @@ class DriverTripDetailBottomSheet(
         val origin = sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "") ?: ""
         val destination = sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "") ?: ""
         val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
+        val dateTime = sharedPreferences.getLong("TRIP_${tripId}_DATETIME", System.currentTimeMillis()) // Nueva línea
 
         editor.putString("EDIT_ROUTE_ORIGIN", origin)
         editor.putString("EDIT_ROUTE_DESTINATION", destination)
         editor.putInt("EDIT_ROUTE_STOPS_COUNT", stopsCount)
+        editor.putLong("EDIT_ROUTE_DATETIME", dateTime) // Nueva línea
 
         // Copiar todas las paradas
         for (i in 0 until stopsCount) {
@@ -152,14 +269,26 @@ class DriverTripDetailBottomSheet(
     }
 
     private fun showCancelConfirmation() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Cancelar Viaje")
-            .setMessage("¿Estás seguro de que quieres cancelar este viaje? Esta acción no se puede deshacer.")
-            .setPositiveButton("Sí, cancelar") { _, _ ->
-                cancelTrip()
-            }
-            .setNegativeButton("No", null)
-            .show()
+        // No permitir cancelar viajes activos sin más contexto
+        if (isActiveTrip()) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Finalizar Viaje Activo")
+                .setMessage("Este viaje está en curso. ¿Quieres finalizarlo? Los pasajeros serán notificados.")
+                .setPositiveButton("Sí, finalizar") { _, _ ->
+                    cancelTrip()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        } else {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Cancelar Viaje")
+                .setMessage("¿Estás seguro de que quieres cancelar este viaje? Esta acción no se puede deshacer.")
+                .setPositiveButton("Sí, cancelar") { _, _ ->
+                    cancelTrip()
+                }
+                .setNegativeButton("No", null)
+                .show()
+        }
     }
 
     private fun cancelTrip() {
@@ -172,6 +301,9 @@ class DriverTripDetailBottomSheet(
         editor.remove("TRIP_${tripId}_ORIGIN")
         editor.remove("TRIP_${tripId}_DESTINATION")
         editor.remove("TRIP_${tripId}_STOPS_COUNT")
+        editor.remove("TRIP_${tripId}_DEPARTURE_TIME")
+        editor.remove("TRIP_${tripId}_DATE")
+        editor.remove("TRIP_${tripId}_ACTUAL_START_TIME")
 
         // Eliminar las paradas
         val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
@@ -217,7 +349,8 @@ class DriverTripDetailBottomSheet(
 
         editor.apply()
 
-        Toast.makeText(requireContext(), "Viaje cancelado exitosamente", Toast.LENGTH_SHORT).show()
+        val message = if (isActiveTrip()) "Viaje finalizado exitosamente" else "Viaje cancelado exitosamente"
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
 
         // Notificar que el viaje se actualizó
         onTripUpdated?.invoke()

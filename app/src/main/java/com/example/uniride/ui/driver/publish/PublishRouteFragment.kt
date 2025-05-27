@@ -3,6 +3,8 @@ package com.example.uniride.ui.driver.publish
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -27,6 +29,8 @@ import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentPublishRouteBinding
 import com.example.uniride.domain.model.Vehicle
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 class PublishRouteFragment : Fragment() {
@@ -37,6 +41,12 @@ class PublishRouteFragment : Fragment() {
     private lateinit var vehicleList: List<Vehicle>
     private val stopsList = mutableListOf<String>()
     private lateinit var sharedPreferences: SharedPreferences
+
+    // Variables para fecha y hora
+    private var selectedDate: Calendar = Calendar.getInstance()
+    private var selectedTime: Calendar = Calendar.getInstance()
+    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     // Variables para edición
     private var isEditing = false
@@ -77,6 +87,7 @@ class PublishRouteFragment : Fragment() {
 
         checkEditMode()
         setupVehicleSpinner()
+        setupDateTimePickers()
         setupContinueButton()
         setupVoiceRecognition()
 
@@ -84,6 +95,74 @@ class PublishRouteFragment : Fragment() {
         binding.btnAddStop.setOnClickListener {
             addNewStopField()
         }
+    }
+
+    private fun setupDateTimePickers() {
+        // Configurar valores iniciales
+        updateDateTimeDisplay()
+
+        // Configurar selector de fecha
+        binding.inputDate.setOnClickListener {
+            showDatePicker()
+        }
+
+        // Configurar selector de hora
+        binding.inputTime.setOnClickListener {
+            showTimePicker()
+        }
+
+        // Hacer que los campos no sean editables directamente
+        binding.inputDate.isFocusable = false
+        binding.inputDate.isClickable = true
+        binding.inputTime.isFocusable = false
+        binding.inputTime.isClickable = true
+    }
+
+    private fun showDatePicker() {
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                selectedDate.set(Calendar.YEAR, year)
+                selectedDate.set(Calendar.MONTH, month)
+                selectedDate.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                updateDateDisplay()
+            },
+            selectedDate.get(Calendar.YEAR),
+            selectedDate.get(Calendar.MONTH),
+            selectedDate.get(Calendar.DAY_OF_MONTH)
+        )
+
+        // No permitir fechas pasadas
+        datePickerDialog.datePicker.minDate = System.currentTimeMillis()
+        datePickerDialog.show()
+    }
+
+    private fun showTimePicker() {
+        val timePickerDialog = TimePickerDialog(
+            requireContext(),
+            { _, hourOfDay, minute ->
+                selectedTime.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                selectedTime.set(Calendar.MINUTE, minute)
+                updateTimeDisplay()
+            },
+            selectedTime.get(Calendar.HOUR_OF_DAY),
+            selectedTime.get(Calendar.MINUTE),
+            true // Formato 24 horas
+        )
+        timePickerDialog.show()
+    }
+
+    private fun updateDateTimeDisplay() {
+        updateDateDisplay()
+        updateTimeDisplay()
+    }
+
+    private fun updateDateDisplay() {
+        binding.inputDate.setText(dateFormat.format(selectedDate.time))
+    }
+
+    private fun updateTimeDisplay() {
+        binding.inputTime.setText(timeFormat.format(selectedTime.time))
     }
 
     private fun checkEditMode() {
@@ -120,9 +199,35 @@ class PublishRouteFragment : Fragment() {
             val stopsCount = sharedPreferences.getInt("EDIT_ROUTE_STOPS_COUNT", 0).takeIf { it > 0 }
                 ?: sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
 
+            // Cargar fecha y hora guardadas
+            val savedDate = sharedPreferences.getString("TRIP_${tripId}_DATE", "")
+            val savedTime = sharedPreferences.getString("TRIP_${tripId}_TIME", "")
+
             // Establecer los valores en los campos de texto
             binding.inputOrigin.setText(origin)
             binding.inputDestination.setText(destination)
+
+            // Establecer fecha y hora si existen
+            if (!savedDate.isNullOrEmpty()) {
+                binding.inputDate.setText(savedDate)
+                try {
+                    selectedDate.time = dateFormat.parse(savedDate) ?: Calendar.getInstance().time
+                } catch (e: Exception) {
+                    selectedDate = Calendar.getInstance()
+                }
+            }
+
+            if (!savedTime.isNullOrEmpty()) {
+                binding.inputTime.setText(savedTime)
+                try {
+                    val timeCalendar = Calendar.getInstance()
+                    timeCalendar.time = timeFormat.parse(savedTime) ?: Calendar.getInstance().time
+                    selectedTime.set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY))
+                    selectedTime.set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
+                } catch (e: Exception) {
+                    selectedTime = Calendar.getInstance()
+                }
+            }
 
             // Limpiar stops existentes
             stopsList.clear()
@@ -239,9 +344,29 @@ class PublishRouteFragment : Fragment() {
         binding.btnContinue.setOnClickListener {
             val originAddress = binding.inputOrigin.text.toString().trim()
             val destinationAddress = binding.inputDestination.text.toString().trim()
+            val selectedDateStr = binding.inputDate.text.toString().trim()
+            val selectedTimeStr = binding.inputTime.text.toString().trim()
 
             if (originAddress.isEmpty() || destinationAddress.isEmpty()) {
                 Toast.makeText(requireContext(), "Por favor completa origen y destino", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (selectedDateStr.isEmpty() || selectedTimeStr.isEmpty()) {
+                Toast.makeText(requireContext(), "Por favor selecciona fecha y hora", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Validar que la fecha y hora no sean en el pasado
+            val selectedDateTime = Calendar.getInstance()
+            selectedDateTime.set(Calendar.YEAR, selectedDate.get(Calendar.YEAR))
+            selectedDateTime.set(Calendar.MONTH, selectedDate.get(Calendar.MONTH))
+            selectedDateTime.set(Calendar.DAY_OF_MONTH, selectedDate.get(Calendar.DAY_OF_MONTH))
+            selectedDateTime.set(Calendar.HOUR_OF_DAY, selectedTime.get(Calendar.HOUR_OF_DAY))
+            selectedDateTime.set(Calendar.MINUTE, selectedTime.get(Calendar.MINUTE))
+
+            if (selectedDateTime.timeInMillis < System.currentTimeMillis()) {
+                Toast.makeText(requireContext(), "No puedes programar un viaje en el pasado", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -257,9 +382,9 @@ class PublishRouteFragment : Fragment() {
             }
 
             if (isEditing && !editingTripId.isNullOrEmpty()) {
-                updateExistingTrip(originAddress, destinationAddress, stopsList)
+                updateExistingTrip(originAddress, destinationAddress, stopsList, selectedDateStr, selectedTimeStr)
             } else {
-                saveRouteData(originAddress, destinationAddress, stopsList)
+                saveRouteData(originAddress, destinationAddress, stopsList, selectedDateStr, selectedTimeStr)
             }
 
             val activity = requireActivity()
@@ -287,7 +412,7 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
-    private fun saveRouteData(origin: String, destination: String, stops: List<String>) {
+    private fun saveRouteData(origin: String, destination: String, stops: List<String>, date: String, time: String) {
         val editor = sharedPreferences.edit()
 
         // Generar nuevo ID para viaje nuevo
@@ -295,6 +420,8 @@ class PublishRouteFragment : Fragment() {
 
         editor.putString("TRIP_${tripId}_ORIGIN", origin)
         editor.putString("TRIP_${tripId}_DESTINATION", destination)
+        editor.putString("TRIP_${tripId}_DATE", date)
+        editor.putString("TRIP_${tripId}_TIME", time)
         editor.putInt("TRIP_${tripId}_STOPS_COUNT", stops.size)
 
         stops.forEachIndexed { index, stop ->
@@ -310,7 +437,7 @@ class PublishRouteFragment : Fragment() {
         editor.apply()
     }
 
-    private fun updateExistingTrip(origin: String, destination: String, stops: List<String>) {
+    private fun updateExistingTrip(origin: String, destination: String, stops: List<String>, date: String, time: String) {
         editingTripId?.let { tripId ->
             val editor = sharedPreferences.edit()
 
@@ -323,6 +450,8 @@ class PublishRouteFragment : Fragment() {
             // Actualizar los datos del viaje existente
             editor.putString("TRIP_${tripId}_ORIGIN", origin)
             editor.putString("TRIP_${tripId}_DESTINATION", destination)
+            editor.putString("TRIP_${tripId}_DATE", date)
+            editor.putString("TRIP_${tripId}_TIME", time)
             editor.putInt("TRIP_${tripId}_STOPS_COUNT", stops.size)
 
             stops.forEachIndexed { index, stop ->
@@ -334,6 +463,8 @@ class PublishRouteFragment : Fragment() {
             if (activeTripId == tripId) {
                 editor.putString("ROUTE_ORIGIN", origin)
                 editor.putString("ROUTE_DESTINATION", destination)
+                editor.putString("ROUTE_DATE", date)
+                editor.putString("ROUTE_TIME", time)
                 editor.putInt("ROUTE_STOPS_COUNT", stops.size)
 
                 // Limpiar paradas activas anteriores
