@@ -9,6 +9,7 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -38,12 +39,27 @@ class DriverTripDetailBottomSheet(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val progressBar = view.findViewById<ProgressBar>(R.id.progress_seats)
-        val tvSeatsInfo = view.findViewById<TextView>(R.id.tv_seats_info)
-        val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
+        val info = trip.tripInformation
 
-        // Mostrar información real del viaje
-        val totalSeats = trip.tripInformation.availableSeats
+        // Vistas
+        val tvRoute = view.findViewById<TextView>(R.id.tv_route)
+        val tvVehicleUsed = view.findViewById<TextView>(R.id.tv_vehicle_used)
+        val tvDateTime = view.findViewById<TextView>(R.id.tv_date_time)
+        val tvPrice = view.findViewById<TextView>(R.id.tv_price)
+        val tvSeatsInfo = view.findViewById<TextView>(R.id.tv_seats_info)
+        val progressBar = view.findViewById<ProgressBar>(R.id.progress_seats)
+        val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
+        val ivVehicleIcon = view.findViewById<ImageView>(R.id.iv_vehicle_icon)
+
+        // Mostrar datos
+        tvRoute.text = "Ruta: ${info.origin} → ${info.destination}"
+        tvVehicleUsed.text = "Vehículo: ${info.carName} (${info.carPlate})"
+        tvDateTime.text = "${info.travelDate} · ${info.departureTime}"
+        tvPrice.text = "Precio: $${info.price.toInt()}"
+        ivVehicleIcon.setImageResource(info.carIcon)
+
+        // Cupos
+        val totalSeats = info.availableSeats
         val occupiedSeats = trip.acceptedCount
         val progress = if (totalSeats > 0) (occupiedSeats * 100) / totalSeats else 0
 
@@ -51,9 +67,12 @@ class DriverTripDetailBottomSheet(
         progressBar.progress = progress
         tvSummary.text = "${trip.acceptedCount} pasajeros aceptados · ${trip.pendingCount} pendientes"
 
+
+
         setupButtons(view)
         updateStartButtonState(view)
     }
+
 
     private fun updateStartButtonState(view: View) {
         val btnStartTrip = view.findViewById<MaterialButton>(R.id.btn_start_trip)

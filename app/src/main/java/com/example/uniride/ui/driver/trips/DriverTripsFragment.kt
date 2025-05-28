@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverTripsBinding
 import com.example.uniride.domain.adapter.DriverTripsAdapter
+import com.example.uniride.domain.model.Car
 import com.example.uniride.domain.model.DriverTripItem
 import com.example.uniride.domain.model.Route
 import com.example.uniride.domain.model.Trip
@@ -78,36 +79,50 @@ class DriverTripsFragment : Fragment() {
                     val route = routeSnap.toObject(Route::class.java) ?: return@addOnSuccessListener
 
                     fetchStopNames(route.idOrigin, route.idDestination) { origin, destination ->
-                        val parsedDate = try {
-                            LocalDate.parse(trip.date)
-                        } catch (e: Exception) {
-                            LocalDate.now()
-                        }
+                        db.collection("Cars").document(trip.idCar)
+                            .get()
+                            .addOnSuccessListener { carSnap ->
+                                val car = carSnap.toObject(Car::class.java)
 
-                        val tripInfo = TripInformation(
-                            carIcon = R.drawable.ic_car,
-                            availableSeats = trip.places,
-                            origin = origin,
-                            destination = destination,
-                            departureTime = trip.startTime,
-                            travelDate = parsedDate
-                        )
+                                val parsedDate = try {
+                                    LocalDate.parse(trip.date)
+                                } catch (e: Exception) {
+                                    LocalDate.now()
+                                }
 
-                        //POR AHORA ESTO LO DEJO ASI PERO HAY QUE CAMBIARLO A LAS STATS REALES
-                        val item = DriverTripItem(
-                            tripInformation = tripInfo,
-                            acceptedCount = 0,
-                            pendingCount = 0,
-                            isFull = false,
-                            hasNewMessages = false,
-                            tripId = trip.id ?: ""
-                        )
+                                val tripInfo = TripInformation(
+                                    carIcon = R.drawable.ic_car,
+                                    availableSeats = trip.places,
+                                    origin = origin,
+                                    destination = destination,
+                                    departureTime = trip.startTime,
+                                    travelDate = parsedDate,
+                                    price = trip.price,
+                                    carName = "${car?.brand} ${car?.model}",
+                                    carPlate = car?.licensePlate ?: "Sin placa"
+                                )
 
-                        items.add(item)
-                        completedCount++
-                        if (completedCount == trips.size) {
-                            showTrips(items)
-                        }
+                                val item = DriverTripItem(
+                                    tripInformation = tripInfo,
+                                    acceptedCount = 1,
+                                    pendingCount = 2,
+                                    isFull = false,
+                                    hasNewMessages = false,
+                                    tripId = trip.id ?: ""
+                                )
+
+                                items.add(item)
+                                completedCount++
+                                if (completedCount == trips.size) {
+                                    showTrips(items)
+                                }
+                            }
+                            .addOnFailureListener {
+                                completedCount++
+                                if (completedCount == trips.size) {
+                                    showTrips(items)
+                                }
+                            }
                     }
                 }
                 .addOnFailureListener {
@@ -118,6 +133,7 @@ class DriverTripsFragment : Fragment() {
                 }
         }
     }
+
 
     //convierte id de origen y destino a sus nombres correspondientes
     private fun fetchStopNames(originId: String, destinationId: String, onResult: (String, String) -> Unit) {
