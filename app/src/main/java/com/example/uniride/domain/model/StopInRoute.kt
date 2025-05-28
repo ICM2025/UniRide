@@ -6,5 +6,5 @@ data class StopInRoute(
     // FK a Stop
     val idStop: String = "",
     val position: Int = 0,
-    val estimatedTime: String? = null
+    //val estimatedTime: String? = null
 )

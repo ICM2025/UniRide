@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -29,10 +30,17 @@ import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentPublishRouteBinding
 import com.example.uniride.domain.model.Car
+import com.example.uniride.domain.model.Route
+import com.example.uniride.domain.model.Stop
+import com.example.uniride.domain.model.StopInRoute
+import com.example.uniride.domain.model.Trip
+import com.example.uniride.domain.model.TripStatus
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 class PublishRouteFragment : Fragment() {
@@ -100,6 +108,7 @@ class PublishRouteFragment : Fragment() {
 
         sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
 
+        setupVehicleSpinner()
         //si se acaba de agregar un vehículo lo preselecciona
         parentFragmentManager.setFragmentResultListener("vehicle_added", viewLifecycleOwner) { _, bundle ->
             val newVehicleId = bundle.getString("newVehicleId")
@@ -388,37 +397,17 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
+
+
     private fun setupContinueButton() {
         binding.btnContinue.setOnClickListener {
+            //valida que todos los datos estén correctos
+            if (!validateTripInputs()) return@setOnClickListener
+
             val originAddress = binding.inputOrigin.text.toString().trim()
             val destinationAddress = binding.inputDestination.text.toString().trim()
-            val selectedDateStr = binding.inputDate.text.toString().trim()
-            val selectedTimeStr = binding.inputTime.text.toString().trim()
 
-            if (originAddress.isEmpty() || destinationAddress.isEmpty()) {
-                Toast.makeText(requireContext(), "Por favor completa origen y destino", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (selectedDateStr.isEmpty() || selectedTimeStr.isEmpty()) {
-                Toast.makeText(requireContext(), "Por favor selecciona fecha y hora", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // Validar que la fecha y hora no sean en el pasado
-            val selectedDateTime = Calendar.getInstance()
-            selectedDateTime.set(Calendar.YEAR, selectedDate.get(Calendar.YEAR))
-            selectedDateTime.set(Calendar.MONTH, selectedDate.get(Calendar.MONTH))
-            selectedDateTime.set(Calendar.DAY_OF_MONTH, selectedDate.get(Calendar.DAY_OF_MONTH))
-            selectedDateTime.set(Calendar.HOUR_OF_DAY, selectedTime.get(Calendar.HOUR_OF_DAY))
-            selectedDateTime.set(Calendar.MINUTE, selectedTime.get(Calendar.MINUTE))
-
-            if (selectedDateTime.timeInMillis < System.currentTimeMillis()) {
-                Toast.makeText(requireContext(), "No puedes programar un viaje en el pasado", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // Recopilar paradas
+            // Recopilar paradas intermedias del formulario
             stopsList.clear()
             for (i in 0 until binding.stopsContainer.childCount) {
                 val stopView = binding.stopsContainer.getChildAt(i)
@@ -429,36 +418,44 @@ class PublishRouteFragment : Fragment() {
                 }
             }
 
+            // para editar
             if (isEditing && !editingTripId.isNullOrEmpty()) {
-                updateExistingTrip(originAddress, destinationAddress, stopsList, selectedDateStr, selectedTimeStr)
-            } else {
-                saveRouteData(originAddress, destinationAddress, stopsList, selectedDateStr, selectedTimeStr)
+                updateExistingTrip(originAddress, destinationAddress, stopsList,
+                    binding.inputDate.text.toString(), binding.inputTime.text.toString()
+                )
+                showTripSuccessDialog()
+                return@setOnClickListener
             }
 
-            val activity = requireActivity()
-            val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+            // Crear origen y destino
+            getOrCreateStopByName(originAddress) { originStop ->
+                if (originStop == null) return@getOrCreateStopByName
 
-            val successText = if (isEditing) "¡Viaje actualizado!" else "¡Viaje publicado!"
-            val secondaryText = if (isEditing) "Tu viaje ha sido actualizado exitosamente" else "Tu viaje ha sido creado exitosamente"
+                getOrCreateStopByName(destinationAddress) { destinationStop ->
+                    if (destinationStop == null) return@getOrCreateStopByName
 
-            dialogView.findViewById<TextView>(R.id.tv_success).text = successText
-            dialogView.findViewById<TextView>(R.id.tv_secondary).text = secondaryText
+                    // Crear paradas intermedias
+                    getOrCreateIntermediateStops(stopsList) { intermediateStops ->
 
-            val dialog = AlertDialog.Builder(activity)
-                .setView(dialogView)
-                .create()
-
-            dialog.window?.setDimAmount(0.75f)
-            dialog.window?.attributes?.windowAnimations = R.style.DialogFadeAnimation
-            dialog.show()
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                dialog.dismiss()
-                activity.setResult(Activity.RESULT_OK)
-                activity.finish()
-            }, 1500)
+                        // Crear ruta y las paradas por ruta
+                        createRouteWithStops(originStop, destinationStop, intermediateStops,
+                            onSuccess = { routeId ->
+                                createTrip(routeId)
+                            },
+                            onError = {
+                                Toast.makeText(requireContext(),
+                                    "No se pudo crear la ruta", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
+
+
+
+
 
     private fun saveRouteData(origin: String, destination: String, stops: List<String>, date: String, time: String) {
         val editor = sharedPreferences.edit()
@@ -603,5 +600,244 @@ class PublishRouteFragment : Fragment() {
 
     companion object {
         private const val VOICE_PERMISSION_REQUEST_CODE = 101
+    }
+
+
+
+
+
+    //validar campos del viaje antes de publicarlo
+    private fun validateTripInputs(): Boolean {
+        val originAddress = binding.inputOrigin.text.toString().trim()
+        val destinationAddress = binding.inputDestination.text.toString().trim()
+        val selectedDateStr = binding.inputDate.text.toString().trim()
+        val selectedTimeStr = binding.inputTime.text.toString().trim()
+
+        if (originAddress.isEmpty() || destinationAddress.isEmpty()) {
+            Toast.makeText(requireContext(), "Por favor completa origen y destino", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        if (selectedCar == null) {
+            Toast.makeText(requireContext(), "Debes seleccionar un vehículo", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        if (selectedDateStr.isEmpty() || selectedTimeStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Por favor selecciona fecha y hora", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        val selectedDateTime = Calendar.getInstance().apply {
+            set(Calendar.YEAR, selectedDate.get(Calendar.YEAR))
+            set(Calendar.MONTH, selectedDate.get(Calendar.MONTH))
+            set(Calendar.DAY_OF_MONTH, selectedDate.get(Calendar.DAY_OF_MONTH))
+            set(Calendar.HOUR_OF_DAY, selectedTime.get(Calendar.HOUR_OF_DAY))
+            set(Calendar.MINUTE, selectedTime.get(Calendar.MINUTE))
+        }
+
+        if (selectedDateTime.timeInMillis < System.currentTimeMillis()) {
+            Toast.makeText(requireContext(), "No puedes programar un viaje en el pasado", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        return true
+    }
+
+    //geodificar y subir a firestore una parada en específico
+    private fun getOrCreateStopByName(name: String, onResult: (Stop?) -> Unit) {
+        val stopsRef = db.collection("Stops")
+
+        stopsRef.whereEqualTo("name", name)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val existingStop = documents.first().toObject(Stop::class.java).copy(
+                        id = documents.first().id
+                    )
+                    onResult(existingStop)
+                } else {
+                    //si la parada no está en la base de datos la crea usando geocoder
+                    val geocoder = Geocoder(requireContext(), Locale.getDefault())
+                    val addresses = try {
+                        geocoder.getFromLocationName(name, 1)
+                    } catch (e: Exception) {
+                        null
+                    }
+
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        val stopData = mapOf(
+                            "name" to name,
+                            "lat" to address.latitude,
+                            "lng" to address.longitude
+                        )
+
+                        stopsRef.add(stopData)
+                            .addOnSuccessListener { docRef ->
+                                val finalStop = Stop(
+                                    id = docRef.id,
+                                    name = name,
+                                    lat = address.latitude,
+                                    lng = address.longitude
+                                )
+                                onResult(finalStop)
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(requireContext(),
+                                    "Error al guardar parada: $name", Toast.LENGTH_SHORT).show()
+                                onResult(null)
+                            }
+                    } else {
+                        Toast.makeText(requireContext(), "No se pudo geolocalizar: $name", Toast.LENGTH_SHORT).show()
+                        onResult(null)
+                    }
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error buscando parada: $name", Toast.LENGTH_SHORT).show()
+                onResult(null)
+            }
+    }
+
+
+    //devuelve la lista de objetos stop en el mismo orden
+    private fun getOrCreateIntermediateStops(stopNames: List<String>,
+                                             onComplete: (List<Stop>) -> Unit) {
+        val resultStops = mutableListOf<Stop>()
+        var processedCount = 0
+
+        if (stopNames.isEmpty()) {
+            onComplete(emptyList())
+            return
+        }
+
+        stopNames.forEach { name ->
+            getOrCreateStopByName(name) { stop ->
+                if (stop != null) {
+                    //se añade la parada resultado a la lista de paradas
+                    resultStops.add(stop)
+                } else {
+                    Toast.makeText(requireContext(),
+                        "Error procesando parada: $name", Toast.LENGTH_SHORT).show()
+                }
+
+                processedCount++
+
+                if (processedCount == stopNames.size) {
+                    // Ordenar resultado según el orden original de stopNames
+                    val orderedStops = stopNames.mapNotNull { n -> resultStops.find { it.name == n } }
+                    onComplete(orderedStops)
+                }
+            }
+        }
+    }
+
+    //crea la ruta y las paradas por ruta
+    private fun createRouteWithStops(
+        origin: Stop,
+        destination: Stop,
+        intermediateStops: List<Stop>,
+        onSuccess: (routeId: String) -> Unit,
+        onError: () -> Unit) {
+        //ubi en la base de datos
+        val routeRef = db.collection("Routes").document()
+
+        val route = Route(
+            id = routeRef.id,
+            idOrigin = origin.id ?: "",
+            idDestination = destination.id ?: ""
+        )
+
+        // guardar la ruta principal
+        routeRef.set(route)
+            .addOnSuccessListener {
+                val stopsInRouteRef = db.collection("StopsInRoute")
+
+                // paradas totales en la ruta
+                val allStopsOrdered = listOf(origin) + intermediateStops + listOf(destination)
+
+                // guardar cada parada intermedia
+                val tasks = allStopsOrdered.mapIndexed { index, stop ->
+                    val stopInRoute = StopInRoute(
+                        idRoute = route.id,
+                        idStop = stop.id ?: "",
+                        position = index
+                    )
+                    stopsInRouteRef.add(stopInRoute)
+                }
+
+                // Esperar a que todas las paradas se guarden
+                Tasks.whenAllComplete(tasks)
+                    .addOnSuccessListener {
+                        onSuccess(route.id)
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(requireContext(),
+                            "Error al guardar paradas en la ruta", Toast.LENGTH_SHORT).show()
+                        onError()
+                    }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al crear la ruta", Toast.LENGTH_SHORT).show()
+                onError()
+            }
+    }
+
+
+
+    //crea el viaje completo
+    private fun createTrip(routeId: String) {
+        val tripRef = db.collection("Trips").document()
+
+        val price = binding.inputPrice.text.toString().toDoubleOrNull() ?: 0.0
+        val places = binding.inputSeats.text.toString().toIntOrNull() ?: 1
+
+        val trip = Trip(
+            id = tripRef.id,
+            idDriver = uid ?: return,
+            idRoute = routeId,
+            idCar = selectedCar?.id ?: "",
+            description = binding.inputDescription.text.toString().trim(),
+            price = price,
+            places = places,
+            date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selectedDate.time),
+            startTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedTime.time),
+            status = TripStatus.PENDING,
+            createdAt = Date()
+        )
+        //guarda el viaje en la base de datos
+        tripRef.set(trip)
+            .addOnSuccessListener {
+                showTripSuccessDialog()
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al publicar el viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+    //mensaje de exito al publicar un viaje
+    private fun showTripSuccessDialog() {
+        val activity = requireActivity()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+
+        dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje publicado!"
+        dialogView.findViewById<TextView>(R.id.tv_secondary).text = "Tu viaje ha sido creado exitosamente"
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setDimAmount(0.75f)
+        dialog.window?.attributes?.windowAnimations = R.style.DialogFadeAnimation
+        dialog.show()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            dialog.dismiss()
+            activity.setResult(Activity.RESULT_OK)
+            activity.finish()
+        }, 1500)
     }
 }

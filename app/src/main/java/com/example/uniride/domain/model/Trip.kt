@@ -3,9 +3,12 @@ package com.example.uniride.domain.model
 import java.util.Date
 
 data class Trip(
-    val id: String = "",
+    //se asigna en firebase
+    val id: String? = null,
     // FK a Driver
     val idDriver: String = "",
+    //FK a Car
+    val idCar: String = "",
     // FK a Route
     val idRoute: String = "",
     val description: String = "",
