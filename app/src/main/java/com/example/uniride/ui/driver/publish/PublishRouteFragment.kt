@@ -28,7 +28,9 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentPublishRouteBinding
-import com.example.uniride.domain.model.Vehicle
+import com.example.uniride.domain.model.Car
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -38,7 +40,7 @@ class PublishRouteFragment : Fragment() {
     private var _binding: FragmentPublishRouteBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var vehicleList: List<Vehicle>
+    //private lateinit var vehicleList: List<Vehicle>
     private val stopsList = mutableListOf<String>()
     private lateinit var sharedPreferences: SharedPreferences
 
@@ -72,6 +74,19 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
+    //Firebase
+    private val db = FirebaseFirestore.getInstance()
+    private val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+    //lista de carros del usuario
+    private lateinit var vehicleList: List<Car>
+    //carro seleccionado
+    private var selectedCar: Car? = null
+
+
+
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -85,8 +100,18 @@ class PublishRouteFragment : Fragment() {
 
         sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
 
+        //si se acaba de agregar un vehículo lo preselecciona
+        parentFragmentManager.setFragmentResultListener("vehicle_added", viewLifecycleOwner) { _, bundle ->
+            val newVehicleId = bundle.getString("newVehicleId")
+            if (newVehicleId != null) {
+                setupVehicleSpinner(preselectVehicleId = newVehicleId)
+            } else {
+                //si no hay vehículo recién cargado
+                setupVehicleSpinner()
+            }
+        }
+
         checkEditMode()
-        setupVehicleSpinner()
         setupDateTimePickers()
         setupContinueButton()
         setupVoiceRecognition()
@@ -309,34 +334,57 @@ class PublishRouteFragment : Fragment() {
     }
 
     //elegir uno de los vehículos registrados del conductor
-    private fun setupVehicleSpinner() {
-        vehicleList = loadVehiclesForUser() // Simulación o llamada real a DB
+    private fun setupVehicleSpinner(preselectVehicleId: String? = null) {
 
-        val vehicleNames = if (vehicleList.isEmpty()) {
-            listOf("Agregar vehículo")
-        } else {
-            vehicleList.map { "${it.brand} ${it.model} (${it.licensePlate})" } + "Agregar vehículo"
-        }
+        loadVehiclesFromFirestore { vehicles ->
+            vehicleList = vehicles
 
-        val adapter =
-            ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerCar.adapter = adapter
+            // Crear lista con opción inicial "Agregar vehículo"
+            val vehicleNames = mutableListOf("Seleccionar un vehículo")
+            if (vehicles.isNotEmpty()) {
+                //datos que se agregan para cada carro
+                vehicleNames.addAll(vehicles.map { "${it.brand} ${it.model} (${it.licensePlate})" })
+            }
+            vehicleNames.add("Agregar vehículo")
 
-        binding.spinnerCar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                val selected = parent.getItemAtPosition(position).toString()
-                if (selected == "Agregar vehículo") {
-                    findNavController().navigate(R.id.action_publishRouteFragment_to_addVehicleFragment)
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            binding.spinnerCar.adapter = adapter
+
+            // Si se pasó un id de vehículo se selecciona de una vez
+            if (preselectVehicleId != null) {
+                val index = vehicles.indexOfFirst { it.id == preselectVehicleId }
+                if (index != -1) {
+                    // +1 por la opción "Seleccionar un vehículo" en la posición 0
+                    binding.spinnerCar.setSelection(index + 1)
                 }
             }
 
-            override fun onNothingSelected(parent: AdapterView<*>) {}
+            //  al seleccionar una opción del spinner
+            binding.spinnerCar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                    val selected = parent.getItemAtPosition(position).toString()
+
+                    when (selected) {
+                        "Agregar vehículo" -> findNavController()
+                            .navigate(R.id.action_publishRouteFragment_to_addVehicleFragment)
+                        "Seleccionar un vehículo" -> {
+                            // No se hace nada, simplemente es la opción inicial
+                        }
+                        else -> {
+                            // Vehículo válido seleccionado
+                            selectedCar = if (
+                                binding.spinnerCar.selectedItemPosition > 0 &&
+                                binding.spinnerCar.selectedItemPosition <= vehicleList.size
+                            ) {
+                                vehicleList[binding.spinnerCar.selectedItemPosition - 1]
+                            } else null
+                        }
+                    }
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>) {}
+            }
         }
     }
 
@@ -495,14 +543,23 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
-    //simulando que tiene carros registrados
-    private fun loadVehiclesForUser(): List<Vehicle> {
-        // Simulado
-        return listOf(
-            Vehicle("Toyota", "Corolla", 2020, "Blanco", "ABC123", listOf()),
-            Vehicle("Mazda", "3", 2022, "Gris", "XYZ987", listOf())
-        )
+    //carros registrados por el conductor
+    private fun loadVehiclesFromFirestore(onComplete: (List<Car>) -> Unit) {
+        if (uid == null) return
+
+        db.collection("Cars")
+            .whereEqualTo("idDriver", uid)
+            .get()
+            .addOnSuccessListener { result ->
+                val vehicles = result.documents.mapNotNull { it.toObject(Car::class.java) }
+                onComplete(vehicles)
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar vehículos", Toast.LENGTH_SHORT).show()
+                onComplete(emptyList())
+            }
     }
+
 
     private fun initStopFields() {
         // Solo agregar un campo si no estamos editando o si no hay paradas cargadas
