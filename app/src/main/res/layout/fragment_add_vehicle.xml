@@ -136,19 +136,6 @@
             android:textColor="@color/text_color"
             android:textColorHint="#808080" />
 
-        <!-- Botón guardar -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_save"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Guardar"
-            android:backgroundTint="@color/main_color"
-            android:textColor="@android:color/white"
-            app:cornerRadius="24dp"
-            android:textAllCaps="false"
-            app:icon="@drawable/ic_check"
-            app:iconGravity="textEnd"
-            app:iconTint="@android:color/white" />
 
         <!-- Imagenes del vehículo -->
         <TextView
@@ -177,6 +164,20 @@
             android:textColor="@color/text_color"
             android:textAllCaps="false"
             android:layout_marginBottom="16dp" />
+
+        <!-- Botón guardar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Guardar"
+            android:backgroundTint="@color/main_color"
+            android:textColor="@android:color/white"
+            app:cornerRadius="24dp"
+            android:textAllCaps="false"
+            app:icon="@drawable/ic_check"
+            app:iconGravity="textEnd"
+            app:iconTint="@android:color/white" />
 
 
     </LinearLayout>

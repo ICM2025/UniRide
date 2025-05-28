@@ -8,6 +8,6 @@ data class Car(
     val model: String = "",
     val year: Int = 0,
     val color: String = "",
-    val numberPlate: String = "",
+    val licensePlate: String = "",
     val images: List<String> = emptyList()
 )
