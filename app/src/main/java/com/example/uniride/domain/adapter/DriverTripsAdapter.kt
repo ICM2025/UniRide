@@ -26,7 +26,7 @@ class DriverTripsAdapter(
 
     override fun onBindViewHolder(holder: TripViewHolder, position: Int) {
         val item = items[position]
-        val travel = item.travelOption
+        val travel = item.tripInformation
 
         holder.binding.apply {
             // Ruta
@@ -45,7 +45,7 @@ class DriverTripsAdapter(
             tvPendingRequests.visibility = if (item.pendingCount > 0) View.VISIBLE else View.GONE
 
             // Icono de vehículo
-            ivVehicleIcon.setImageResource(travel.drawableResId)
+            ivVehicleIcon.setImageResource(travel.carIcon)
 
             // si está lleno hacemos un enfoque opaco
             root.alpha = if (item.isFull) 0.6f else 1.0f

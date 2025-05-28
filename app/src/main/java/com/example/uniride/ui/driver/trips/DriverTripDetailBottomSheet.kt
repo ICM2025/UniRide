@@ -43,7 +43,7 @@ class DriverTripDetailBottomSheet(
         val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
 
         // Mostrar información real del viaje
-        val totalSeats = trip.travelOption.availableSeats
+        val totalSeats = trip.tripInformation.availableSeats
         val occupiedSeats = trip.acceptedCount
         val progress = if (totalSeats > 0) (occupiedSeats * 100) / totalSeats else 0
 
@@ -89,8 +89,8 @@ class DriverTripDetailBottomSheet(
 
     private fun calculateMinutesToDeparture(): Long {
         return try {
-            val time = LocalTime.parse(trip.travelOption.departureTime, DateTimeFormatter.ofPattern("HH:mm"))
-            val departureDateTime = LocalDateTime.of(trip.travelOption.travelDate, time)
+            val time = LocalTime.parse(trip.tripInformation.departureTime, DateTimeFormatter.ofPattern("HH:mm"))
+            val departureDateTime = LocalDateTime.of(trip.tripInformation.travelDate, time)
             val now = LocalDateTime.now()
 
             val duration = java.time.Duration.between(now, departureDateTime)
