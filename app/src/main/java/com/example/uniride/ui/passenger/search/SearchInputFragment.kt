@@ -179,17 +179,27 @@ class SearchInputFragment : Fragment() {
             )
         }
 
+
+
+
+        //para verificar si los campos de origen y destino tuvieron cambios
         binding.etOrigin.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 activeField = EditTextField.ORIGIN
             }
         }
-
         binding.etDestination.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 activeField = EditTextField.DESTINATION
             }
         }
+
+
+
+
+
+
+
 
         binding.btnVoiceOrigin.setOnClickListener {
             activeField = EditTextField.ORIGIN
