@@ -104,9 +104,29 @@ class RegisterFragment : Fragment() {
                         imgProfile = "",
                         createdAt = Date()
                     )
-                    //se guardan los datos del usuario en firestore
+
+                    // Guardar datos básicos sin token aún
                     db.collection("users").document(uid).set(user)
                         .addOnSuccessListener {
+                            // Ahora obtenemos el token FCM
+                            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                                .addOnCompleteListener { tokenTask ->
+                                    if (tokenTask.isSuccessful) {
+                                        val token = tokenTask.result
+
+                                        // Guardamos el token en el mismo documento del usuario
+                                        db.collection("users").document(uid)
+                                            .update("token", token)
+                                            .addOnSuccessListener {
+                                                Log.d("Register", "Token guardado correctamente")
+                                            }
+                                            .addOnFailureListener {
+                                                Log.e("Register", "Error guardando token: ${it.message}")
+                                            }
+                                    }
+                                }
+
+                            // Ir al MainActivity
                             val intent = Intent(requireContext(), MainActivity::class.java)
                             startActivity(intent)
                             requireActivity().finish()
@@ -115,13 +135,13 @@ class RegisterFragment : Fragment() {
                             Toast.makeText(requireContext(), "Error al guardar datos: ${e.message}", Toast.LENGTH_LONG).show()
                         }
 
-
                 } else {
                     Log.e("Register", "Error al registrar: ${task.exception?.localizedMessage}")
                     Toast.makeText(requireContext(), "Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                 }
             }
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView()

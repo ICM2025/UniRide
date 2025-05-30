@@ -13,6 +13,8 @@ import com.example.uniride.R
 import com.example.uniride.databinding.FragmentLoginBinding
 import com.example.uniride.ui.MainActivity
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 
 
 class LoginFragment : Fragment() {
@@ -77,6 +79,31 @@ class LoginFragment : Fragment() {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
+                    // Obtener userId actual
+                    val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
+
+                    // Obtener token FCM
+                    FirebaseMessaging.getInstance().token.addOnCompleteListener { tokenTask ->
+                        if (tokenTask.isSuccessful) {
+                            val token = tokenTask.result
+
+                            // Guardar token en Firestore
+                            val db = FirebaseFirestore.getInstance()
+                            val userRef = db.collection("users").document(userId)
+                            userRef.update("token", token)
+                                .addOnSuccessListener {
+                                    // Token guardado exitosamente (opcional log)
+                                    Log.d("Login", "Token FCM guardado")
+                                }
+                                .addOnFailureListener {
+                                    // Si no existe el documento, lo creamos
+                                    val data = hashMapOf("token" to token)
+                                    userRef.set(data)
+                                }
+                        }
+                    }
+
+                    // Ir a MainActivity
                     startActivity(Intent(requireContext(), MainActivity::class.java))
                     requireActivity().finish()
                 } else {
