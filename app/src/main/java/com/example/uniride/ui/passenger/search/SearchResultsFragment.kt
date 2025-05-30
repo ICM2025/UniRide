@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -438,7 +439,7 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                             destinationStop?.name == destinationQuery
                         ) {
                             // Buscar paradas intermedias
-                            db.collection("StopInRoute")
+                            db.collection("StopsInRoute")
                                 .whereEqualTo("idRoute", route.id)
                                 .get()
                                 .addOnSuccessListener { interSnap ->
@@ -454,6 +455,7 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                                         .get()
                                         .addOnSuccessListener { interStopsSnap ->
                                             val intermediateStops = interStopsSnap.toObjects(Stop::class.java)
+                                                .filter { it.name != originStop.name && it.name != destinationStop.name }
                                             buildTripPassengerDetail(trip, originStop, destinationStop, intermediateStops, onValid)
                                         }
                                 }
@@ -550,6 +552,11 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
 
         detailView.findViewById<Button>(R.id.btnRequest)?.setOnClickListener {
             Toast.makeText(requireContext(), "Solicitaste el viaje a ${info.destination}", Toast.LENGTH_SHORT).show()
+        }
+        val btnClose = detailView.findViewById<ImageView>(R.id.btnClose)
+        btnClose?.setOnClickListener {
+            detailView.visibility = View.GONE
+            view.findViewById<RecyclerView>(R.id.rv_options)?.visibility = View.VISIBLE
         }
     }
 
