@@ -135,6 +135,7 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
 
         // Configurar el comportamiento del BottomSheet
         setupBottomSheet()
+        checkRequestStatus()
 
         binding.btnBack.setOnClickListener {
             findNavController().navigateUp()
@@ -575,8 +576,6 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
 
     private fun savePassengerRequest(tripId: String, onResult: (Boolean) -> Unit) {
         val db = FirebaseFirestore.getInstance()
-
-        // Obtener el ID del usuario actual (necesitarás implementar esto según tu sistema de auth)
         val currentUserId = getCurrentUserId()
 
         if (currentUserId.isNullOrEmpty()) {
@@ -584,14 +583,15 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
             return
         }
 
-        // Verificar si ya existe una solicitud para este viaje y usuario
+        // Verificar si ya existe una solicitud PENDING para este viaje y usuario
         db.collection("PassengerRequests")
             .whereEqualTo("idTrip", tripId)
             .whereEqualTo("idUser", currentUserId)
+            .whereEqualTo("status", RequestStatus.PENDING)
             .get()
             .addOnSuccessListener { snapshot ->
                 if (snapshot.isEmpty) {
-                    // No existe, crear nueva solicitud
+                    // No existe solicitud pendiente, crear nueva
                     val request = PassengerRequest(
                         idTrip = tripId,
                         idUser = currentUserId,
@@ -608,8 +608,8 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                         }
                         .addOnFailureListener { onResult(false) }
                 } else {
-                    // Ya existe una solicitud
-                    Toast.makeText(requireContext(), "Ya tienes una solicitud para este viaje", Toast.LENGTH_SHORT).show()
+                    // Ya existe una solicitud pendiente
+                    Toast.makeText(requireContext(), "Ya tienes una solicitud pendiente para este viaje", Toast.LENGTH_SHORT).show()
                     onResult(false)
                 }
             }
@@ -618,5 +618,45 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
 
     private fun getCurrentUserId(): String? {
         return FirebaseAuth.getInstance().currentUser?.uid
+    }
+
+    private fun checkRequestStatus() {
+        val db = FirebaseFirestore.getInstance()
+        val currentUserId = getCurrentUserId()
+
+        db.collection("PassengerRequests")
+            .whereEqualTo("idUser", currentUserId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("RequestStatus", "Error listening to requests", error)
+                    return@addSnapshotListener
+                }
+
+                snapshot?.documents?.forEach { doc ->
+                    val request = doc.toObject(PassengerRequest::class.java)
+                    if (request != null) {
+                        when (request.status) {
+                            RequestStatus.ACCEPTED -> {
+                                showStatusMessage("¡Tu solicitud fue aceptada!", true)
+                            }
+                            RequestStatus.REJECTED -> {
+                                showStatusMessage("Tu solicitud fue rechazada", false)
+                            }
+                            else -> { /* PENDING - no hacer nada */ }
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun showStatusMessage(message: String, isPositive: Boolean) {
+        val color = if (isPositive) {
+            ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark)
+        } else {
+            ContextCompat.getColor(requireContext(), android.R.color.holo_red_dark)
+        }
+
+        val toast = Toast.makeText(requireContext(), message, Toast.LENGTH_LONG)
+        toast.show()
     }
 }

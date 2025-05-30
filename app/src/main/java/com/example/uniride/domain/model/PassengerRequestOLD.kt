@@ -9,5 +9,6 @@ data class PassengerRequestOLD(
     val email: String,
     val tripCount: Int,
     val rating: Double,
-    val reviewsCount: Int
+    val reviewsCount: Int,
+    val requestId: String = ""
 )
