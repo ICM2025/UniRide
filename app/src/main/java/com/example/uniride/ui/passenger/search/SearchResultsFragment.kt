@@ -575,8 +575,6 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
 
     private fun savePassengerRequest(tripId: String, onResult: (Boolean) -> Unit) {
         val db = FirebaseFirestore.getInstance()
-
-        // Obtener el ID del usuario actual (necesitarás implementar esto según tu sistema de auth)
         val currentUserId = getCurrentUserId()
 
         if (currentUserId.isNullOrEmpty()) {
@@ -595,7 +593,9 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                     val request = PassengerRequest(
                         idTrip = tripId,
                         idUser = currentUserId,
-                        status = RequestStatus.PENDING
+                        status = RequestStatus.PENDING,
+                        attemptCount = 1,
+                        createdAt = System.currentTimeMillis()
                     )
 
                     db.collection("PassengerRequests")
@@ -608,9 +608,38 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                         }
                         .addOnFailureListener { onResult(false) }
                 } else {
-                    // Ya existe una solicitud
-                    Toast.makeText(requireContext(), "Ya tienes una solicitud para este viaje", Toast.LENGTH_SHORT).show()
-                    onResult(false)
+                    // Verificar si puede volver a solicitar
+                    val existingRequest = snapshot.documents.first()
+                    val attempts = existingRequest.getLong("requestAttempts")?.toInt() ?: 1
+                    val status = existingRequest.getString("status")
+
+                    when (status) {
+                        RequestStatus.PENDING.name -> {
+                            Toast.makeText(requireContext(), "Ya tienes una solicitud pendiente para este viaje", Toast.LENGTH_SHORT).show()
+                            onResult(false)
+                        }
+                        RequestStatus.ACCEPTED.name -> {
+                            Toast.makeText(requireContext(), "Ya fuiste aceptado en este viaje", Toast.LENGTH_SHORT).show()
+                            onResult(false)
+                        }
+                        RequestStatus.REJECTED.name -> {
+                            if (attempts >= 3) {
+                                Toast.makeText(requireContext(), "Has alcanzado el máximo de intentos para este viaje", Toast.LENGTH_LONG).show()
+                                onResult(false)
+                            } else {
+                                // Permitir nueva solicitud
+                                existingRequest.reference.update(
+                                    mapOf(
+                                        "status" to RequestStatus.PENDING.name,
+                                        "requestAttempts" to attempts + 1,
+                                        "createdAt" to System.currentTimeMillis()
+                                    )
+                                ).addOnSuccessListener { onResult(true) }
+                                    .addOnFailureListener { onResult(false) }
+                            }
+                        }
+                        else -> onResult(false)
+                    }
                 }
             }
             .addOnFailureListener { onResult(false) }

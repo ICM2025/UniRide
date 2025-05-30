@@ -187,7 +187,7 @@ class PassengerRequestsFragment : Fragment() {
 
         val travelRequest = TravelRequest(
             travelOption = travelOption,
-            requestDate = LocalDateTime.now(), // Puedes usar la fecha de creación real si la guardas
+            requestDate = LocalDateTime.ofEpochSecond(passengerRequest.createdAt / 1000, 0, java.time.ZoneOffset.UTC),
             status = status
         )
 
