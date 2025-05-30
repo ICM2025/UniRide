@@ -24,8 +24,11 @@ import com.example.uniride.R
 import com.example.uniride.databinding.FragmentSearchResultsBinding
 import com.example.uniride.domain.adapter.TripPassengerDetailAdapter
 import com.example.uniride.domain.model.Car
+import com.example.uniride.domain.model.PassengerRequest
+import com.example.uniride.domain.model.RequestStatus
 import com.example.uniride.domain.model.Route
 import com.example.uniride.domain.model.Stop
+import com.example.uniride.domain.model.TravelOption
 import com.example.uniride.domain.model.Trip
 import com.example.uniride.domain.model.User
 import com.example.uniride.domain.model.front.TripInformation
@@ -41,6 +44,7 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.gms.tasks.Tasks
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
@@ -550,9 +554,18 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
             ?: "-"
         detailView.findViewById<TextView>(R.id.tvStops)?.text = "Paradas: $stopsText"
 
+        // CAMBIO IMPORTANTE: Usar TravelDetailBottomSheet en lugar del botón inline
         detailView.findViewById<Button>(R.id.btnRequest)?.setOnClickListener {
-            Toast.makeText(requireContext(), "Solicitaste el viaje a ${info.destination}", Toast.LENGTH_SHORT).show()
+            // Guardar la solicitud en Firebase
+            savePassengerRequest(tripDetail.tripId) { success ->
+                if (success) {
+                    Toast.makeText(requireContext(), "Solicitaste el viaje a ${info.destination}", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "Error al enviar solicitud", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
+
         val btnClose = detailView.findViewById<ImageView>(R.id.btnClose)
         btnClose?.setOnClickListener {
             detailView.visibility = View.GONE
@@ -560,10 +573,50 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
+    private fun savePassengerRequest(tripId: String, onResult: (Boolean) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
 
+        // Obtener el ID del usuario actual (necesitarás implementar esto según tu sistema de auth)
+        val currentUserId = getCurrentUserId()
 
+        if (currentUserId.isNullOrEmpty()) {
+            onResult(false)
+            return
+        }
 
+        // Verificar si ya existe una solicitud para este viaje y usuario
+        db.collection("PassengerRequests")
+            .whereEqualTo("idTrip", tripId)
+            .whereEqualTo("idUser", currentUserId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.isEmpty) {
+                    // No existe, crear nueva solicitud
+                    val request = PassengerRequest(
+                        idTrip = tripId,
+                        idUser = currentUserId,
+                        status = RequestStatus.PENDING
+                    )
 
+                    db.collection("PassengerRequests")
+                        .add(request)
+                        .addOnSuccessListener { docRef ->
+                            // Actualizar el documento con su propio ID
+                            docRef.update("id", docRef.id)
+                                .addOnSuccessListener { onResult(true) }
+                                .addOnFailureListener { onResult(false) }
+                        }
+                        .addOnFailureListener { onResult(false) }
+                } else {
+                    // Ya existe una solicitud
+                    Toast.makeText(requireContext(), "Ya tienes una solicitud para este viaje", Toast.LENGTH_SHORT).show()
+                    onResult(false)
+                }
+            }
+            .addOnFailureListener { onResult(false) }
+    }
 
-
+    private fun getCurrentUserId(): String? {
+        return FirebaseAuth.getInstance().currentUser?.uid
+    }
 }
