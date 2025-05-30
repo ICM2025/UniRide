@@ -1,19 +1,28 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+admin.initializeApp();
 
-const {onRequest} = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
+exports.sendTestNotification = functions.https.onRequest(async (req, res) => {
+  const token = req.query.token;
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+  if (!token) {
+    return res.status(400).send("Falta el token en la query");
+  }
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+  const message = {
+    notification: {
+      title: "Notificación de prueba",
+      body: "¡Hola! Esta es una prueba FCM 📲",
+    },
+    token: token,
+  };
+
+  try {
+    const response = await admin.messaging().send(message);
+    console.log("Notificación enviada:", response);
+    res.send("Notificación enviada con éxito");
+  } catch (error) {
+    console.error("Error enviando notificación:", error);
+    res.status(500).send("Error al enviar notificación");
+  }
+});
