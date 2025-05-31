@@ -230,9 +230,9 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val db = FirebaseFirestore.getInstance()
 
-        db.collection("trips")
+        db.collection("Trips")
             .whereEqualTo("idDriver", uid)
-            .whereEqualTo("status", TripStatus.PENDING) // IN_PROGRESS según tu lógica
+            .whereEqualTo("status", "ACTIVE") // Cambiar de "PENDING" a "ACTIVE"
             .get()
             .addOnSuccessListener { documents ->
                 callback(!documents.isEmpty)
@@ -382,7 +382,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
         mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f))
 
-
         lightSensor?.let {
             val currentLightValue = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)?.let { 10000f } ?: 100f
             updateMapStyle(currentLightValue)
@@ -392,13 +391,16 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         if (hasLocationPermission) {
             getCurrentLocationAndCenter()
         } else {
-            // Si no hay permisos, usar ubicación por defecto
             mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f))
         }
+
         updatePublishTripButton()
 
+        // Verificar inmediatamente si hay viaje activo cuando el mapa esté listo
         checkActiveTrip { hasActiveTrip ->
+            Log.d("DriverHome", "Mapa listo - ¿Hay viaje activo?: $hasActiveTrip")
             if (hasActiveTrip) {
+                Log.d("DriverHome", "Cargando ruta desde onMapReady")
                 loadRouteAndDisplay()
             }
         }
@@ -417,9 +419,9 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val db = FirebaseFirestore.getInstance()
 
-        db.collection("trips")
+        db.collection("Trips")
             .whereEqualTo("idDriver", uid)
-            .whereEqualTo("status", TripStatus.PENDING)
+            .whereEqualTo("status", "ACTIVE") // Cambiar de "PENDING" a "ACTIVE"
             .get()
             .addOnSuccessListener { documents ->
                 if (!documents.isEmpty) {
@@ -430,10 +432,10 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                             idDriver = it["idDriver"] as? String ?: "",
                             idRoute = it["idRoute"] as? String ?: "",
                             description = it["description"] as? String ?: "",
-                            price = it["price"] as? Double ?: 0.0,
+                            price = (it["price"] as? Number)?.toDouble() ?: 0.0,
                             date = it["date"] as? String ?: "",
                             startTime = it["startTime"] as? String ?: "",
-                            status = TripStatus.valueOf(it["status"] as? String ?: "PENDING")
+                            status = TripStatus.valueOf(it["status"] as? String ?: "ACTIVE")
                         )
                     }
                     callback(trip)
@@ -448,41 +450,158 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private fun loadRouteFromTrip(trip: Trip) {
         val db = FirebaseFirestore.getInstance()
+        Log.d("DriverHome", "Cargando ruta con ID: ${trip.idRoute}")
 
         // Cargar los datos de la ruta desde Firestore usando el idRoute del trip
-        db.collection("routes").document(trip.idRoute)
+        db.collection("Routes").document(trip.idRoute)
             .get()
             .addOnSuccessListener { routeDocument ->
                 if (routeDocument.exists()) {
                     val routeData = routeDocument.data
+                    Log.d("DriverHome", "Datos de ruta encontrados: $routeData")
 
-                    // Extraer origen, destino y paradas
-                    val originMap = routeData?.get("origin") as? Map<String, Double>
-                    val destinationMap = routeData?.get("destination") as? Map<String, Double>
-                    val stopsArray = routeData?.get("stops") as? List<Map<String, Double>>
+                    // Tu estructura tiene idOrigin e idDestination, no objetos directos
+                    val idOrigin = routeData?.get("idOrigin") as? String
+                    val idDestination = routeData?.get("idDestination") as? String
+                    val stopsArray = routeData?.get("stops") as? List<String> // IDs de paradas
 
-                    if (originMap != null && destinationMap != null) {
-                        originLocation = LatLng(originMap["latitude"] ?: 0.0, originMap["longitude"] ?: 0.0)
-                        destinationLocation = LatLng(destinationMap["latitude"] ?: 0.0, destinationMap["longitude"] ?: 0.0)
+                    if (idOrigin != null && idDestination != null) {
+                        Log.d("DriverHome", "Cargando origen: $idOrigin y destino: $idDestination")
 
-                        // Cargar paradas si existen
-                        stopLocations.clear()
-                        stopsArray?.forEach { stopMap ->
-                            val lat = stopMap["latitude"] ?: 0.0
-                            val lng = stopMap["longitude"] ?: 0.0
-                            stopLocations.add(LatLng(lat, lng))
+                        // CORRECCIÓN: Buscar tanto origen como destino en "Stops"
+                        loadLocationFromId(idOrigin, "Stops") { originLatLng ->
+                            if (originLatLng != null) {
+                                originLocation = originLatLng
+                                Log.d("DriverHome", "Origen cargado: $originLatLng")
+
+                                loadLocationFromId(idDestination, "Stops") { destinationLatLng ->
+                                    if (destinationLatLng != null) {
+                                        destinationLocation = destinationLatLng
+                                        Log.d("DriverHome", "Destino cargado: $destinationLatLng")
+
+                                        // Cargar paradas si existen
+                                        if (!stopsArray.isNullOrEmpty()) {
+                                            loadStopsFromIds(stopsArray) { stops ->
+                                                stopLocations.clear()
+                                                stopLocations.addAll(stops)
+                                                Log.d("DriverHome", "Paradas cargadas: ${stops.size}")
+
+                                                // Dibujar la ruta con paradas
+                                                drawRoute(originLocation!!, destinationLocation!!, stopLocations)
+                                                isInActiveTrip = true
+                                            }
+                                        } else {
+                                            // Dibujar la ruta sin paradas
+                                            stopLocations.clear()
+                                            Log.d("DriverHome", "Dibujando ruta sin paradas")
+                                            drawRoute(originLocation!!, destinationLocation!!, stopLocations)
+                                            isInActiveTrip = true
+                                        }
+                                    } else {
+                                        Log.e("DriverHome", "Error: No se pudo cargar el destino")
+                                    }
+                                }
+                            } else {
+                                Log.e("DriverHome", "Error: No se pudo cargar el origen")
+                            }
                         }
-
-                        // Dibujar la ruta
-                        drawRoute(originLocation!!, destinationLocation!!, stopLocations)
-                        isInActiveTrip = true
+                    } else {
+                        Log.e("DriverHome", "Error: idOrigin o idDestination son null")
                     }
+                } else {
+                    Log.e("DriverHome", "Error: Documento de ruta no existe")
                 }
             }
             .addOnFailureListener { e ->
                 Log.e("RouteLoad", "Error cargando ruta: ${e.message}")
-                Toast.makeText(requireContext(), "Error cargando ruta del viaje", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun loadLocationFromId(locationId: String, collection: String, callback: (LatLng?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection(collection).document(locationId)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val data = document.data
+
+                    // Intentar primero con 'latitude' y 'longitude' (formato estándar)
+                    var latitude = data?.get("latitude") as? Double
+                    var longitude = data?.get("longitude") as? Double
+
+                    // Si no existen, intentar con 'lat' y 'lng' (formato alternativo)
+                    if (latitude == null || longitude == null) {
+                        latitude = data?.get("lat") as? Double
+                        longitude = data?.get("lng") as? Double
+                    }
+
+                    if (latitude != null && longitude != null) {
+                        Log.d("DriverHome", "Coordenadas encontradas para $locationId: lat=$latitude, lng=$longitude")
+                        callback(LatLng(latitude, longitude))
+                    } else {
+                        Log.e("DriverHome", "Coordenadas no encontradas en $collection/$locationId. Datos disponibles: $data")
+                        callback(null)
+                    }
+                } else {
+                    Log.e("DriverHome", "Documento no encontrado: $collection/$locationId")
+                    callback(null)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("DriverHome", "Error cargando ubicación $collection/$locationId: ${e.message}")
+                callback(null)
+            }
+    }
+
+    private fun loadStopsFromIds(stopIds: List<String>, callback: (List<LatLng>) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        val stops = mutableListOf<LatLng>()
+        var pendingLoads = stopIds.size
+
+        if (pendingLoads == 0) {
+            callback(stops)
+            return
+        }
+
+        for (stopId in stopIds) {
+            db.collection("Stops").document(stopId)
+                .get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        val data = document.data
+
+                        // Intentar primero con 'latitude' y 'longitude' (formato estándar)
+                        var latitude = data?.get("latitude") as? Double
+                        var longitude = data?.get("longitude") as? Double
+
+                        // Si no existen, intentar con 'lat' y 'lng' (formato alternativo)
+                        if (latitude == null || longitude == null) {
+                            latitude = data?.get("lat") as? Double
+                            longitude = data?.get("lng") as? Double
+                        }
+
+                        if (latitude != null && longitude != null) {
+                            stops.add(LatLng(latitude, longitude))
+                            Log.d("DriverHome", "Parada $stopId cargada: lat=$latitude, lng=$longitude")
+                        } else {
+                            Log.e("DriverHome", "Coordenadas no encontradas para parada $stopId. Datos: $data")
+                        }
+                    }
+
+                    pendingLoads--
+                    if (pendingLoads == 0) {
+                        callback(stops)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("DriverHome", "Error cargando parada $stopId: ${e.message}")
+                    pendingLoads--
+                    if (pendingLoads == 0) {
+                        callback(stops)
+                    }
+                }
+        }
     }
 
     //Encuentra la ubicación de una dirección
@@ -495,7 +614,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(requireContext(), "Error al encontrar ubicación: ${e.message}", Toast.LENGTH_SHORT).show()
         }
         return null
     }
@@ -507,7 +625,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             getDirectionsData(origin, destination, stops)
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(requireContext(),"Error al obtener la ruta: ${e.message}",Toast.LENGTH_SHORT).show()
             isRouteDisplayed = false
         }
     }
@@ -579,14 +696,12 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                     } else {
                         Log.e("DirectionsAPI", "Status no OK: $status")
                         requireActivity().runOnUiThread {
-                            Toast.makeText(requireContext(), "Error al obtener la ruta: $status", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Log.e("DirectionsAPI", "Error obteniendo ruta: ${e.message}")
                     requireActivity().runOnUiThread {
-                        Toast.makeText(requireContext(), "Error al obtener la ruta: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -653,7 +768,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(requireContext(),"Error al obtener la ruta: ${e.message}",Toast.LENGTH_SHORT).show()
             isRouteDisplayed = false
         }
     }
@@ -737,35 +851,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             .show()
     }
 
-    private fun deleteFromActiveTrips(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
-        db.collection("active_trips").document(tripId)
-            .delete()
-            .addOnSuccessListener {
-                Log.d("TripFinish", "Viaje eliminado de active_trips exitosamente")
-                loadingDialog.dismiss()
-                // Mostrar mensaje de éxito
-                showTripCompletedDialog()
-            }
-            .addOnFailureListener { e ->
-                loadingDialog.dismiss()
-                Log.e("TripFinish", "Error eliminando viaje de active_trips: ${e.message}")
-                Toast.makeText(requireContext(), "Error al limpiar datos del viaje: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    private fun showTripCompletedDialog() {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("¡Viaje Completado!")
-            .setMessage("Has completado exitosamente el viaje. Gracias por usar UniRide como conductor.")
-            .setPositiveButton("Ver Historial") { _, _ ->
-                findNavController().navigate(R.id.driverTripsFragment)
-            }
-            .setNegativeButton("Continuar") { _, _ ->
-            }
-            .setCancelable(false)
-            .show()
-    }
-
     override fun onLocationChanged(location: Location) {
         currentLocation = location
 
@@ -822,16 +907,18 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             "lastUpdate" to com.google.firebase.Timestamp.now()
         )
 
-        // Actualizar la ubicación del conductor in tiempo real
-        db.collection("active_trips")
-            .whereEqualTo("driverId", uid)
+        db.collection("Trips")
+            .whereEqualTo("idDriver", uid)
+            .whereEqualTo("status", "ACTIVE") // Cambiar de "PENDING" a "ACTIVE"
             .get()
             .addOnSuccessListener { documents ->
                 for (document in documents) {
                     document.reference.update("driverLocation", locationData)
                         .addOnSuccessListener {
+                            Log.d("DriverLocation", "Ubicación actualizada exitosamente")
                         }
                         .addOnFailureListener { e ->
+                            Log.e("DriverLocation", "Error actualizando ubicación: ${e.message}")
                         }
                 }
             }
@@ -839,6 +926,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 Log.e("DriverLocation", "Error buscando viajes activos: ${e.message}")
             }
     }
+
+
 
     private fun updateRouteFromCurrentLocation(currentLocation: Location) {
         val currentLatLng = LatLng(currentLocation.latitude, currentLocation.longitude)
@@ -858,12 +947,10 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private fun drawRouteFromCurrentPosition(origin: LatLng, destination: LatLng, stops: List<LatLng>) {
         try {
-            Toast.makeText(requireContext(), "Actualizando ruta...", Toast.LENGTH_SHORT).show()
             getDirectionsDataForUpdate(origin, destination, stops)
         } catch (e: Exception) {
             e.printStackTrace()
             Log.e("RouteUpdate", "Error al actualizar la ruta: ${e.message}")
-            Toast.makeText(requireContext(), "Error al actualizar la ruta: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -942,7 +1029,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.e("RouteUpdate", "Error obteniendo ruta actualizada: ${e.message}")
         }
     }
 
@@ -991,15 +1077,12 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 }
 
                 isRouteDisplayed = true
-                Toast.makeText(requireContext(), "Ruta actualizada", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(requireContext(), "No se pudo actualizar la ruta", Toast.LENGTH_SHORT).show()
                 isRouteDisplayed = false
             }
         } catch (e: Exception) {
             e.printStackTrace()
             Log.e("RouteUpdate", "Error al mostrar la ruta actualizada: ${e.message}")
-            Toast.makeText(requireContext(), "Error al mostrar la ruta actualizada: ${e.message}", Toast.LENGTH_SHORT).show()
             isRouteDisplayed = false
         }
     }
@@ -1077,10 +1160,9 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             .create()
         loadingDialog.show()
 
-        // Buscar trip activo en la colección "trips"
-        db.collection("trips")
+        db.collection("Trips")
             .whereEqualTo("idDriver", uid)
-            .whereEqualTo("status", TripStatus.PENDING.name)
+            .whereEqualTo("status", "ACTIVE") // Cambiar de "PENDING" a "ACTIVE"
             .get()
             .addOnSuccessListener { documents ->
                 if (!documents.isEmpty) {
@@ -1099,93 +1181,31 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private fun updateTripStatusToTerminated(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
         val updateData = hashMapOf<String, Any>(
-            "status" to TripStatus.TERMINATED.name
-        )
-
-        db.collection("trips").document(tripId)
-            .update(updateData)
-            .addOnSuccessListener {
-                loadingDialog.dismiss()
-                showTripCompletedDialog()
-            }
-            .addOnFailureListener { e ->
-                loadingDialog.dismiss()
-                Toast.makeText(requireContext(), "Error al finalizar viaje", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    private fun updateTripStatus(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
-        val updateData = hashMapOf<String, Any>(
             "status" to "TERMINATED",
             "endTime" to com.google.firebase.Timestamp.now(),
             "completedAt" to System.currentTimeMillis()
         )
 
-        db.collection("active_trips").document(tripId)
+        db.collection("Trips").document(tripId)
             .update(updateData)
             .addOnSuccessListener {
-                Log.d("TripFinish", "Estado del viaje actualizado a 'TERMINATED'")
+                loadingDialog.dismiss()
 
-                // Mover el viaje a historial
-                moveToTripHistory(tripId, db, loadingDialog)
+                // Limpiar estado local
+                isInActiveTrip = false
+                isNearDestination = false
+                mMap?.clear()
+                routePolyline?.remove()
+                routePolyline = null
+                isRouteDisplayed = false
+                preventLocationCameraUpdate = false
+                lastUpdateLocation = null
             }
             .addOnFailureListener { e ->
                 loadingDialog.dismiss()
-                Log.e("TripFinish", "Error actualizando estado del viaje: ${e.message}")
-                Toast.makeText(requireContext(), "Error al finalizar viaje", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Error al finalizar viaje: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
-
-    private fun moveToTripHistory(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
-        // Obtener los datos del viaje
-        db.collection("active_trips").document(tripId)
-            .get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    val tripData = document.data?.toMutableMap() ?: mutableMapOf()
-
-                    // Añadir información adicional para el historial
-                    tripData["archivedAt"] = com.google.firebase.Timestamp.now()
-                    tripData["finalStatus"] = "FINISHED"
-                    tripData["completionMethod"] = "DRIVER_FINISHED" // Indicar que fue el conductor quien terminó
-
-                    // Agregar estadísticas del viaje si están disponibles
-                    currentLocation?.let { location ->
-                        tripData["finalDriverLocation"] = hashMapOf(
-                            "latitude" to location.latitude,
-                            "longitude" to location.longitude
-                        )
-                    }
-
-                    // Guardar en el historial
-                    db.collection("trip_history").document(tripId)
-                        .set(tripData)
-                        .addOnSuccessListener {
-                            Log.d("TripFinish", "Viaje movido al historial exitosamente")
-
-                            // Eliminar de viajes activos
-                            deleteFromActiveTrips(tripId, db, loadingDialog)
-                        }
-                        .addOnFailureListener { e ->
-                            loadingDialog.dismiss()
-                            Log.e("TripFinish", "Error moviendo viaje al historial: ${e.message}")
-                            Toast.makeText(requireContext(), "Error al archivar viaje: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                } else {
-                    loadingDialog.dismiss()
-                    Log.e("TripFinish", "El documento del viaje no existe")
-                    Toast.makeText(requireContext(), "Error: El viaje no existe", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .addOnFailureListener { e ->
-                loadingDialog.dismiss()
-                Log.e("TripFinish", "Error obteniendo datos del viaje: ${e.message}")
-                Toast.makeText(requireContext(), "Error al obtener datos del viaje: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-
-
 
     override fun onResume() {
         super.onResume()
@@ -1207,15 +1227,18 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         updatePublishTripButton()
         updateFinishTripButton()
 
-        // Cambiar esta parte:
+        // Verificar inmediatamente si hay un viaje activo
         checkActiveTrip { hasActiveTrip ->
             isInActiveTrip = hasActiveTrip
+            Log.d("DriverHome", "¿Hay viaje activo?: $hasActiveTrip")
 
             if (hasActiveTrip) {
                 if (!isRouteDisplayed && mMap != null) {
+                    Log.d("DriverHome", "Cargando ruta para viaje activo")
                     loadRouteAndDisplay()
                 }
             } else {
+                // Limpiar mapa si no hay viaje activo
                 mMap?.clear()
                 routePolyline?.remove()
                 routePolyline = null
