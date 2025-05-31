@@ -3,7 +3,6 @@ package com.example.uniride.ui.driver.home
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.hardware.Sensor
@@ -32,6 +31,8 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverHomeBinding
+import com.example.uniride.domain.model.Trip
+import com.example.uniride.domain.model.TripStatus
 import com.example.uniride.ui.MainActivity
 import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -58,6 +59,11 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private var _binding: FragmentDriverHomeBinding? = null
     private val binding get() = _binding!!
+    private val UPDATE_DISTANCE = 100f
+    private var isInActiveTrip = false
+    private val FINISH_TRIP_DISTANCE = 100f
+    private var isNearDestination = false
+    private var tripId: String? = null
 
     // Location components
     private lateinit var locationManager: LocationManager
@@ -72,12 +78,14 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     private var mMap: GoogleMap? = null
     private var routePolyline: Polyline? = null
     private lateinit var geocoder: Geocoder
-    private lateinit var sharedPreferences: SharedPreferences
     private val defaultLocation = LatLng(4.6097, -74.0817) // Bogotá, Colombia
+    private var currentTrip: Trip? = null
+
 
     // Location variables
     private var originLocation: LatLng? = null
     private var destinationLocation: LatLng? = null
+    private var lastUpdateLocation: Location? = null
     private var stopLocations: MutableList<LatLng> = mutableListOf()
     private var currentRoutePolyline: Polyline? = null
     private var currentLocation: Location? = null
@@ -127,9 +135,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         // oculta el botón del menú lateral
         requireActivity().findViewById<ImageButton>(R.id.btn_menu)?.visibility = View.GONE
-
-
-
 
         // verificación de si es conductor
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
@@ -182,7 +187,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
 
         //flujo para mapa, ubicación y permisos
-        sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
         geocoder = Geocoder(requireContext())
         registerPublishTripLauncher()
 
@@ -204,17 +208,51 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             publishTripLauncher.launch(intent)
         }
 
+        binding.btnFinishTrip.setOnClickListener {
+            showFinishTripDialog()
+        }
+
         checkLocationPermission()
-
-
     }
 
     private fun updatePublishTripButton() {
-        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
-            binding.btnPublishTrip.visibility = View.GONE
-        } else {
-            binding.btnPublishTrip.visibility = View.VISIBLE
-            binding.btnPublishTrip.text = "Publicar Viaje"
+        checkActiveTrip { hasActiveTrip ->
+            if (hasActiveTrip) {
+                binding.btnPublishTrip.visibility = View.GONE
+            } else {
+                binding.btnPublishTrip.visibility = View.VISIBLE
+                binding.btnPublishTrip.text = "Publicar Viaje"
+            }
+        }
+    }
+
+    private fun checkActiveTrip(callback: (Boolean) -> Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("trips")
+            .whereEqualTo("idDriver", uid)
+            .whereEqualTo("status", TripStatus.PENDING) // IN_PROGRESS según tu lógica
+            .get()
+            .addOnSuccessListener { documents ->
+                callback(!documents.isEmpty)
+            }
+            .addOnFailureListener {
+                callback(false)
+            }
+    }
+
+    private fun updateFinishTripButton() {
+        checkActiveTrip { hasActiveTrip ->
+            if (hasActiveTrip && isNearDestination) {
+                binding.btnFinishTrip.visibility = View.VISIBLE
+                binding.btnPublishTrip.visibility = View.GONE
+            } else {
+                binding.btnFinishTrip.visibility = View.GONE
+                if (!hasActiveTrip) {
+                    binding.btnPublishTrip.visibility = View.VISIBLE
+                }
+            }
         }
     }
 
@@ -288,10 +326,14 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                         Manifest.permission.ACCESS_FINE_LOCATION
                     ) == PackageManager.PERMISSION_GRANTED
                 ) {
+                    // Usar intervalos más frecuentes durante viaje activo
+                    val minTime = if (isInActiveTrip) 2000L else 5000L // 2s vs 5s
+                    val minDistance = if (isInActiveTrip) 5f else 10f // 5m vs 10m
+
                     locationManager.requestLocationUpdates(
                         LocationManager.GPS_PROVIDER,
-                        5000,
-                        10f,
+                        minTime,
+                        minDistance,
                         this
                     )
 
@@ -327,15 +369,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             if (result.resultCode == android.app.Activity.RESULT_OK) {
             }
         }}
-/*
-    private fun updateUIForActiveRoute() {
-        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
-            binding.btnPublishTrip.text = "Editar Viaje"
-            preventLocationCameraUpdate = true
-        }
-    }
-
- */
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
@@ -364,51 +397,92 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
         updatePublishTripButton()
 
-        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
-            loadRouteAndDisplay()
+        checkActiveTrip { hasActiveTrip ->
+            if (hasActiveTrip) {
+                loadRouteAndDisplay()
+            }
         }
     }
 
     private fun loadRouteAndDisplay() {
-        // Solo cargar la ruta si hay una ruta activa, no solo publicada
-        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
-            val originAddress = sharedPreferences.getString("ROUTE_ORIGIN", null)
-            val destinationAddress = sharedPreferences.getString("ROUTE_DESTINATION", null)
-            val stopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
-
-            if (mMap == null) {
-                return
-            }
-
-            stopLocations.clear()
-            routePolyline?.remove()
-
-            mMap?.clear()
-            isRouteDisplayed = false
-
-            if (!originAddress.isNullOrEmpty() && !destinationAddress.isNullOrEmpty()) {
-                originLocation = findLocation(originAddress)
-                destinationLocation = findLocation(destinationAddress)
-
-                for (i in 0 until stopsCount) {
-                    val stopAddress = sharedPreferences.getString("ROUTE_STOP_$i", null)
-                    if (!stopAddress.isNullOrEmpty()) {
-                        val stopLocation = findLocation(stopAddress)
-                        if (stopLocation != null) {
-                            stopLocations.add(stopLocation)
-                        }
-                    }
-                }
-
-                if (originLocation != null && destinationLocation != null) {
-                    drawRoute(originLocation!!, destinationLocation!!, stopLocations)
-                    preventLocationCameraUpdate = true
-                    isRouteDisplayed = true
-                } else {
-                    Toast.makeText(requireContext(),"No se pudieron encontrar las ubicaciones",Toast.LENGTH_SHORT).show()
-                }
+        loadActiveTrip { trip ->
+            if (trip != null) {
+                // Cargar la ruta usando los datos del trip de Firestore
+                loadRouteFromTrip(trip)
             }
         }
+    }
+
+    private fun loadActiveTrip(callback: (Trip?) -> Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("trips")
+            .whereEqualTo("idDriver", uid)
+            .whereEqualTo("status", TripStatus.PENDING)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val tripData = documents.documents[0].data
+                    val trip = tripData?.let {
+                        Trip(
+                            id = documents.documents[0].id,
+                            idDriver = it["idDriver"] as? String ?: "",
+                            idRoute = it["idRoute"] as? String ?: "",
+                            description = it["description"] as? String ?: "",
+                            price = it["price"] as? Double ?: 0.0,
+                            date = it["date"] as? String ?: "",
+                            startTime = it["startTime"] as? String ?: "",
+                            status = TripStatus.valueOf(it["status"] as? String ?: "PENDING")
+                        )
+                    }
+                    callback(trip)
+                } else {
+                    callback(null)
+                }
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+    }
+
+    private fun loadRouteFromTrip(trip: Trip) {
+        val db = FirebaseFirestore.getInstance()
+
+        // Cargar los datos de la ruta desde Firestore usando el idRoute del trip
+        db.collection("routes").document(trip.idRoute)
+            .get()
+            .addOnSuccessListener { routeDocument ->
+                if (routeDocument.exists()) {
+                    val routeData = routeDocument.data
+
+                    // Extraer origen, destino y paradas
+                    val originMap = routeData?.get("origin") as? Map<String, Double>
+                    val destinationMap = routeData?.get("destination") as? Map<String, Double>
+                    val stopsArray = routeData?.get("stops") as? List<Map<String, Double>>
+
+                    if (originMap != null && destinationMap != null) {
+                        originLocation = LatLng(originMap["latitude"] ?: 0.0, originMap["longitude"] ?: 0.0)
+                        destinationLocation = LatLng(destinationMap["latitude"] ?: 0.0, destinationMap["longitude"] ?: 0.0)
+
+                        // Cargar paradas si existen
+                        stopLocations.clear()
+                        stopsArray?.forEach { stopMap ->
+                            val lat = stopMap["latitude"] ?: 0.0
+                            val lng = stopMap["longitude"] ?: 0.0
+                            stopLocations.add(LatLng(lat, lng))
+                        }
+
+                        // Dibujar la ruta
+                        drawRoute(originLocation!!, destinationLocation!!, stopLocations)
+                        isInActiveTrip = true
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("RouteLoad", "Error cargando ruta: ${e.message}")
+                Toast.makeText(requireContext(), "Error cargando ruta del viaje", Toast.LENGTH_SHORT).show()
+            }
     }
 
     //Encuentra la ubicación de una dirección
@@ -623,18 +697,337 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         return poly
     }
 
+    private fun checkDistanceToDestination(currentLocation: Location) {
+        if (destinationLocation == null) return
+
+        val destinationLocationObj = Location("destination").apply {
+            latitude = destinationLocation!!.latitude
+            longitude = destinationLocation!!.longitude
+        }
+
+        val distanceToDestination = currentLocation.distanceTo(destinationLocationObj)
+
+        Log.d("TripFinish", "Distancia al destino: ${distanceToDestination}m")
+
+        val wasNearDestination = isNearDestination
+        isNearDestination = distanceToDestination <= FINISH_TRIP_DISTANCE
+
+        // Solo actualizar UI si cambió el estado
+        if (wasNearDestination != isNearDestination) {
+            updateFinishTripButton()
+
+            if (isNearDestination) {
+                Toast.makeText(
+                    requireContext(),
+                    "¡Has llegado cerca del destino! Puedes terminar el viaje.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun showFinishTripDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Terminar Viaje")
+            .setMessage("¿Estás seguro de que quieres terminar el viaje? Esta acción no se puede deshacer.")
+            .setPositiveButton("Sí, Terminar") { _, _ ->
+                finishTrip()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun deleteFromActiveTrips(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
+        db.collection("active_trips").document(tripId)
+            .delete()
+            .addOnSuccessListener {
+                Log.d("TripFinish", "Viaje eliminado de active_trips exitosamente")
+                loadingDialog.dismiss()
+                // Mostrar mensaje de éxito
+                showTripCompletedDialog()
+            }
+            .addOnFailureListener { e ->
+                loadingDialog.dismiss()
+                Log.e("TripFinish", "Error eliminando viaje de active_trips: ${e.message}")
+                Toast.makeText(requireContext(), "Error al limpiar datos del viaje: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun showTripCompletedDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("¡Viaje Completado!")
+            .setMessage("Has completado exitosamente el viaje. Gracias por usar UniRide como conductor.")
+            .setPositiveButton("Ver Historial") { _, _ ->
+                findNavController().navigate(R.id.driverTripsFragment)
+            }
+            .setNegativeButton("Continuar") { _, _ ->
+            }
+            .setCancelable(false)
+            .show()
+    }
+
     override fun onLocationChanged(location: Location) {
         currentLocation = location
 
-        if (!preventLocationCameraUpdate && !isInitialLocationSet) {
+        if (!preventLocationCameraUpdate && !isInitialLocationSet && !isRouteDisplayed) {
             val currentLatLng = LatLng(location.latitude, location.longitude)
             mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
             isInitialLocationSet = true
         }
 
-        if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false) && !isRouteDisplayed && mMap != null) {
-            loadRouteAndDisplay()
+        checkAndUpdateRouteIfNeeded(location)
+
+        if (isInActiveTrip) {
+            checkDistanceToDestination(location)
         }
+
+        // Cambiar esta verificación:
+        checkActiveTrip { hasActiveTrip ->
+            if (hasActiveTrip && !isRouteDisplayed && mMap != null) {
+                loadRouteAndDisplay()
+            }
+        }
+    }
+
+    private fun checkAndUpdateRouteIfNeeded(currentLocation: Location) {
+        checkActiveTrip { hasActiveTrip ->
+            isInActiveTrip = hasActiveTrip
+
+            if (!isInActiveTrip || destinationLocation == null) {
+                return@checkActiveTrip
+            }
+
+            val distanceFromLast = if (lastUpdateLocation != null) {
+                currentLocation.distanceTo(lastUpdateLocation!!)
+            } else {
+                Float.MAX_VALUE
+            }
+
+            if (lastUpdateLocation == null || distanceFromLast >= UPDATE_DISTANCE) {
+                lastUpdateLocation = Location(currentLocation)
+                updateDriverLocationInFirestore(currentLocation)
+                updateRouteFromCurrentLocation(currentLocation)
+            }
+        }
+    }
+
+    private fun updateDriverLocationInFirestore(location: Location) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        val locationData = hashMapOf(
+            "latitude" to location.latitude,
+            "longitude" to location.longitude,
+            "timestamp" to System.currentTimeMillis(),
+            "lastUpdate" to com.google.firebase.Timestamp.now()
+        )
+
+        // Actualizar la ubicación del conductor in tiempo real
+        db.collection("active_trips")
+            .whereEqualTo("driverId", uid)
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+                    document.reference.update("driverLocation", locationData)
+                        .addOnSuccessListener {
+                        }
+                        .addOnFailureListener { e ->
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("DriverLocation", "Error buscando viajes activos: ${e.message}")
+            }
+    }
+
+    private fun updateRouteFromCurrentLocation(currentLocation: Location) {
+        val currentLatLng = LatLng(currentLocation.latitude, currentLocation.longitude)
+
+        if (destinationLocation == null) {
+            return
+        }
+
+        // Filtrar las paradas que aún no se han alcanzado
+        val remainingStops = filterRemainingStops(currentLatLng, stopLocations)
+        // Limpiar la ruta anterior
+        routePolyline?.remove()
+
+        // Redibujar la ruta desde la ubicación actual hasta el destino
+        drawRouteFromCurrentPosition(currentLatLng, destinationLocation!!, remainingStops)
+    }
+
+    private fun drawRouteFromCurrentPosition(origin: LatLng, destination: LatLng, stops: List<LatLng>) {
+        try {
+            Toast.makeText(requireContext(), "Actualizando ruta...", Toast.LENGTH_SHORT).show()
+            getDirectionsDataForUpdate(origin, destination, stops)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.e("RouteUpdate", "Error al actualizar la ruta: ${e.message}")
+            Toast.makeText(requireContext(), "Error al actualizar la ruta: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getDirectionsDataForUpdate(
+        origin: LatLng,
+        destination: LatLng,
+        waypoints: List<LatLng>
+    ) {
+        try {
+            var urlString = "https://maps.googleapis.com/maps/api/directions/json?" +
+                    "origin=${origin.latitude},${origin.longitude}" +
+                    "&destination=${destination.latitude},${destination.longitude}" +
+                    "&mode=driving"
+
+            if (waypoints.isNotEmpty()) {
+                urlString += "&waypoints="
+                waypoints.forEachIndexed { index, point ->
+                    urlString += "${point.latitude},${point.longitude}"
+                    if (index < waypoints.size - 1) urlString += "|"
+                }
+            }
+
+            urlString += "&key=$DIRECTIONS_API_KEY"
+            networkExecutor.execute {
+                try {
+                    val url = URL(urlString)
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.requestMethod = "GET"
+                    connection.connectTimeout = 15000
+                    connection.readTimeout = 15000
+
+                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+
+                    reader.close()
+
+                    val jsonObject = JSONObject(response.toString())
+                    val status = jsonObject.getString("status")
+
+                    if (status == "OK") {
+                        val routes = jsonObject.getJSONArray("routes")
+
+                        if (routes.length() > 0) {
+                            val legs = routes.getJSONObject(0).getJSONArray("legs")
+                            val path = ArrayList<LatLng>()
+
+                            for (i in 0 until legs.length()) {
+                                val steps = legs.getJSONObject(i).getJSONArray("steps")
+
+                                for (j in 0 until steps.length()) {
+                                    val points = steps.getJSONObject(j).getJSONObject("polyline").getString("points")
+                                    path.addAll(decodePoly(points))
+                                }
+                            }
+
+                            requireActivity().runOnUiThread {
+                                displayUpdatedRouteOnMap(path, origin, destination, waypoints)
+                            }
+                        }
+                    } else {
+                        requireActivity().runOnUiThread {
+                            Toast.makeText(requireContext(), "Error al actualizar la ruta: $status", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(requireContext(), "Error al actualizar la ruta: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.e("RouteUpdate", "Error obteniendo ruta actualizada: ${e.message}")
+        }
+    }
+
+    private fun displayUpdatedRouteOnMap(path: List<LatLng>, origin: LatLng, destination: LatLng, stops: List<LatLng>) {
+        try {
+            // Remover la ruta anterior
+            routePolyline?.remove()
+
+            // Limpiar marcadores anteriores (excepto la ubicación actual del usuario)
+            mMap?.clear()
+
+            if (path.isNotEmpty()) {
+                val polylineOptions = PolylineOptions()
+                    .addAll(path)
+                    .width(12f)
+                    .color(Color.BLUE)
+                    .geodesic(true)
+
+                routePolyline = mMap?.addPolyline(polylineOptions)
+
+                // Agregar marcador de ubicación actual (conductor)
+                mMap?.addMarker(MarkerOptions().position(origin).title("Tu ubicación actual"))
+
+                // Agregar marcador de destino
+                mMap?.addMarker(MarkerOptions().position(destination).title("Destino"))
+
+                // Agregar marcadores de paradas restantes
+                stops.forEachIndexed { index, latLng ->
+                    mMap?.addMarker(MarkerOptions().position(latLng).title("Parada ${index + 1}"))
+                }
+
+                // Ajustar la cámara para mostrar toda la ruta actualizada
+                val builder = LatLngBounds.Builder()
+                builder.include(origin)
+                builder.include(destination)
+                stops.forEach { builder.include(it) }
+
+                try {
+                    val bounds = builder.build()
+                    val padding = 150
+                    val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
+                    mMap?.animateCamera(cameraUpdate)
+                } catch (e: Exception) {
+                    mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(origin, 14f))
+                    e.printStackTrace()
+                }
+
+                isRouteDisplayed = true
+                Toast.makeText(requireContext(), "Ruta actualizada", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "No se pudo actualizar la ruta", Toast.LENGTH_SHORT).show()
+                isRouteDisplayed = false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.e("RouteUpdate", "Error al mostrar la ruta actualizada: ${e.message}")
+            Toast.makeText(requireContext(), "Error al mostrar la ruta actualizada: ${e.message}", Toast.LENGTH_SHORT).show()
+            isRouteDisplayed = false
+        }
+    }
+
+    private fun filterRemainingStops(currentLocation: LatLng, allStops: List<LatLng>): List<LatLng> {
+        val remainingStops = mutableListOf<LatLng>()
+        val currentLocationObj = Location("current").apply {
+            latitude = currentLocation.latitude
+            longitude = currentLocation.longitude
+        }
+
+        for (stop in allStops) {
+            val stopLocation = Location("stop").apply {
+                latitude = stop.latitude
+                longitude = stop.longitude
+            }
+
+            // Si la parada está a más de 300m, considerarla como pendiente
+            // Reducimos la distancia para ser más precisos
+            val distanceToStop = currentLocationObj.distanceTo(stopLocation)
+            Log.d("RouteUpdate", "Distancia a parada: ${distanceToStop}m")
+
+            if (distanceToStop > 300f) {
+                remainingStops.add(stop)
+            }
+        }
+
+        return remainingStops
     }
 
     private fun getCurrentLocationAndCenter() {
@@ -674,6 +1067,126 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
     }
 
+    private fun finishTrip() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        val loadingDialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setMessage("Finalizando viaje...")
+            .setCancelable(false)
+            .create()
+        loadingDialog.show()
+
+        // Buscar trip activo en la colección "trips"
+        db.collection("trips")
+            .whereEqualTo("idDriver", uid)
+            .whereEqualTo("status", TripStatus.PENDING.name)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val tripDoc = documents.documents[0]
+                    updateTripStatusToTerminated(tripDoc.id, db, loadingDialog)
+                } else {
+                    loadingDialog.dismiss()
+                    Toast.makeText(requireContext(), "No se encontró un viaje activo", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { e ->
+                loadingDialog.dismiss()
+                Toast.makeText(requireContext(), "Error al buscar viaje activo", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun updateTripStatusToTerminated(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
+        val updateData = hashMapOf<String, Any>(
+            "status" to TripStatus.TERMINATED.name
+        )
+
+        db.collection("trips").document(tripId)
+            .update(updateData)
+            .addOnSuccessListener {
+                loadingDialog.dismiss()
+                showTripCompletedDialog()
+            }
+            .addOnFailureListener { e ->
+                loadingDialog.dismiss()
+                Toast.makeText(requireContext(), "Error al finalizar viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun updateTripStatus(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
+        val updateData = hashMapOf<String, Any>(
+            "status" to "TERMINATED",
+            "endTime" to com.google.firebase.Timestamp.now(),
+            "completedAt" to System.currentTimeMillis()
+        )
+
+        db.collection("active_trips").document(tripId)
+            .update(updateData)
+            .addOnSuccessListener {
+                Log.d("TripFinish", "Estado del viaje actualizado a 'TERMINATED'")
+
+                // Mover el viaje a historial
+                moveToTripHistory(tripId, db, loadingDialog)
+            }
+            .addOnFailureListener { e ->
+                loadingDialog.dismiss()
+                Log.e("TripFinish", "Error actualizando estado del viaje: ${e.message}")
+                Toast.makeText(requireContext(), "Error al finalizar viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun moveToTripHistory(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
+        // Obtener los datos del viaje
+        db.collection("active_trips").document(tripId)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val tripData = document.data?.toMutableMap() ?: mutableMapOf()
+
+                    // Añadir información adicional para el historial
+                    tripData["archivedAt"] = com.google.firebase.Timestamp.now()
+                    tripData["finalStatus"] = "FINISHED"
+                    tripData["completionMethod"] = "DRIVER_FINISHED" // Indicar que fue el conductor quien terminó
+
+                    // Agregar estadísticas del viaje si están disponibles
+                    currentLocation?.let { location ->
+                        tripData["finalDriverLocation"] = hashMapOf(
+                            "latitude" to location.latitude,
+                            "longitude" to location.longitude
+                        )
+                    }
+
+                    // Guardar en el historial
+                    db.collection("trip_history").document(tripId)
+                        .set(tripData)
+                        .addOnSuccessListener {
+                            Log.d("TripFinish", "Viaje movido al historial exitosamente")
+
+                            // Eliminar de viajes activos
+                            deleteFromActiveTrips(tripId, db, loadingDialog)
+                        }
+                        .addOnFailureListener { e ->
+                            loadingDialog.dismiss()
+                            Log.e("TripFinish", "Error moviendo viaje al historial: ${e.message}")
+                            Toast.makeText(requireContext(), "Error al archivar viaje: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                } else {
+                    loadingDialog.dismiss()
+                    Log.e("TripFinish", "El documento del viaje no existe")
+                    Toast.makeText(requireContext(), "Error: El viaje no existe", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { e ->
+                loadingDialog.dismiss()
+                Log.e("TripFinish", "Error obteniendo datos del viaje: ${e.message}")
+                Toast.makeText(requireContext(), "Error al obtener datos del viaje: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+
+
     override fun onResume() {
         super.onResume()
         isInitialLocationSet = false
@@ -691,20 +1204,27 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             getCurrentLocationAndCenter()
         }
 
-        // MODIFICADO: Actualizar el estado del botón al resumir
         updatePublishTripButton()
+        updateFinishTripButton()
 
-        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
-            if (!isRouteDisplayed && mMap != null) {
-                loadRouteAndDisplay()
+        // Cambiar esta parte:
+        checkActiveTrip { hasActiveTrip ->
+            isInActiveTrip = hasActiveTrip
+
+            if (hasActiveTrip) {
+                if (!isRouteDisplayed && mMap != null) {
+                    loadRouteAndDisplay()
+                }
+            } else {
+                mMap?.clear()
+                routePolyline?.remove()
+                routePolyline = null
+                isRouteDisplayed = false
+                preventLocationCameraUpdate = false
+                isInActiveTrip = false
+                isNearDestination = false
+                lastUpdateLocation = null
             }
-        } else {
-            // Si no hay ruta activa, limpiar el mapa
-            mMap?.clear()
-            routePolyline?.remove()
-            routePolyline = null
-            isRouteDisplayed = false
-            preventLocationCameraUpdate = false
         }
     }
 

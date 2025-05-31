@@ -91,19 +91,19 @@ class DriverTripDetailBottomSheet(
             }
             // Puede iniciarse (menos de 10 minutos)
             minutesToDeparture in 0..10 -> {
-                btnStartTrip.text = "Iniciar viaje"
+                btnStartTrip.text = "Iniciar"
                 btnStartTrip.isEnabled = true
                 btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
             }
             // Muy temprano para iniciar
             minutesToDeparture > 10 -> {
-                btnStartTrip.text = "Inicia en ${minutesToDeparture} min"
+                btnStartTrip.text = "${minutesToDeparture} min"
                 btnStartTrip.isEnabled = false
                 btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
             }
             // Viaje vencido
             else -> {
-                btnStartTrip.text = "Viaje vencido"
+                btnStartTrip.text = "Vencido"
                 btnStartTrip.isEnabled = false
                 btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_rejected))
             }

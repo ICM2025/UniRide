@@ -42,8 +42,17 @@
         android:textColor="@android:color/white"
         app:cornerRadius="16dp" />
 
+    <Button
+            android:id="@+id/btnFinishTrip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="36dp"
+            android:text="Terminar Viaje"
+            android:backgroundTint="#D30000"
+            android:textColor="@android:color/white"
 
-
+            android:layout_alignParentBottom="true"
+            />
 
 
 </FrameLayout>
