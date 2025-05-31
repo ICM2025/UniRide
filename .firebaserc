@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "uniride-fed59"
-  }
+    "default": "uniride-fed59",
+    "uniride": "uniride-fed59"
+  },
+  "targets": {},
+  "etags": {}
 }

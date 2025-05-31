@@ -33,6 +33,7 @@ import com.example.uniride.domain.model.Trip
 import com.example.uniride.domain.model.User
 import com.example.uniride.domain.model.front.TripInformation
 import com.example.uniride.domain.model.front.TripPassengerDetail
+import com.example.uniride.messaging.NotificationSender
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -603,7 +604,17 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                         .addOnSuccessListener { docRef ->
                             // Actualizar el documento con su propio ID
                             docRef.update("id", docRef.id)
-                                .addOnSuccessListener { onResult(true) }
+                                .addOnSuccessListener {
+                                    obtenerTokenDelConductor(tripId) { token ->
+                                        obtenerNombreDelUsuario(currentUserId) { nombre ->
+                                            if (token != null && nombre != null) {
+                                                NotificationSender.enviar(token, "solicitud_cupo", nombre) { success ->
+                                                    Log.d("Notificación", if (success) "Enviada" else "Falló")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 .addOnFailureListener { onResult(false) }
                         }
                         .addOnFailureListener { onResult(false) }
@@ -648,4 +659,38 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
     private fun getCurrentUserId(): String? {
         return FirebaseAuth.getInstance().currentUser?.uid
     }
+    private fun obtenerTokenDelConductor(tripId: String, callback: (String?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("Trips").document(tripId).get()
+            .addOnSuccessListener { tripSnap ->
+                val idDriver = tripSnap.getString("idDriver")
+                if (idDriver.isNullOrEmpty()) {
+                    callback(null)
+                    return@addOnSuccessListener
+                }
+
+                db.collection("users").document(idDriver).get()
+                    .addOnSuccessListener { userSnap ->
+                        val token = userSnap.getString("token") // O el nombre exacto del campo en tu base
+                        callback(token)
+                    }
+                    .addOnFailureListener { callback(null) }
+            }
+            .addOnFailureListener { callback(null) }
+    }
+    //para enviar la notificación
+    private fun obtenerNombreDelUsuario(uid: String, callback: (String?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { snapshot ->
+                val nombre = snapshot.getString("username") // o "name", depende de tu estructura
+                callback(nombre)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+    }
+
+
 }
