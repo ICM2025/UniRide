@@ -40,11 +40,16 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:padding="8dp"/>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:layout_marginBottom="25dp"
         android:padding="8dp">
 
         <EditText
@@ -58,6 +63,7 @@
             android:id="@+id/enviarButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/main_color"
             android:text="Enviar" />
     </LinearLayout>
 </LinearLayout>

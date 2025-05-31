@@ -13,7 +13,8 @@ class PassengerRequestsAdapter(
     private val items: List<PassengerRequestOLD>,
     private val onAccept: (PassengerRequestOLD) -> Unit,
     private val onReject: (PassengerRequestOLD) -> Unit,
-    private val onClick: (PassengerRequestOLD) -> Unit
+    private val onClick: (PassengerRequestOLD) -> Unit,
+    private val onMessageClick: (PassengerRequestOLD) -> Unit
 ) : RecyclerView.Adapter<PassengerRequestsAdapter.RequestViewHolder>() {
 
     inner class RequestViewHolder(val binding: ItemTripRequestDriverBinding) :
@@ -51,6 +52,9 @@ class PassengerRequestsAdapter(
         }
         holder.itemView.setOnClickListener {
             onClick(item)
+        }
+        holder.binding.btnMessage.setOnClickListener {
+            onMessageClick(item)
         }
 
     }

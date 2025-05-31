@@ -61,7 +61,8 @@
 
         <activity
             android:name=".ui.MainActivity"
-            android:exported="false" />
+            android:exported="false"
+            />
         <service
             android:name=".messaging.MyFirebaseMessagingService"
             android:exported="false">

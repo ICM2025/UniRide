@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentTripRequestBinding
@@ -165,7 +166,22 @@ class TripRequestsFragment : Fragment() {
             items = requests,
             onAccept = { req -> acceptPassengerRequest(req) },
             onReject = { req -> rejectPassengerRequest(req) },
-            onClick = { req -> showPassengerDetails(req) }
+            onClick = { req -> showPassengerDetails(req) },
+            onMessageClick = { req ->
+                buscarUidPorEmail(req.email) { uid ->
+                    if (uid != null) {
+                        val action = TripRequestsFragmentDirections
+                            .actionTripRequestsFragmentToChatFragment(
+                                receiverId = uid,
+                                receiverName = req.passengerName
+                            )
+                        findNavController().navigate(action)
+                    } else {
+                        Toast.makeText(requireContext(), "No se encontró el pasajero", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
         )
         binding.rvPassengerRequests.adapter = adapter
     }
@@ -326,6 +342,25 @@ class TripRequestsFragment : Fragment() {
                 callback(null)
             }
     }
+    private fun buscarUidPorEmail(email: String, callback: (String?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users")
+            .whereEqualTo("email", email)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (!snapshot.isEmpty) {
+                    val userId = snapshot.documents.first().id
+                    callback(userId)
+                } else {
+                    callback(null)
+                }
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+    }
+
 
 
 }

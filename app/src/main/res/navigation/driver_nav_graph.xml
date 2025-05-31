@@ -24,7 +24,12 @@
         android:id="@+id/tripRequestsFragment"
         android:name="com.example.uniride.ui.driver.trips.TripRequestsFragment"
         android:label="fragment_trip_request"
-        tools:layout="@layout/fragment_trip_request" />
+        tools:layout="@layout/fragment_trip_request" >
+        <action
+            android:id="@+id/action_tripRequestsFragment_to_chatFragment"
+            app:destination="@id/chatFragment" />
+
+    </fragment>
     <fragment
         android:id="@+id/registerDriverFragment"
         android:name="com.example.uniride.ui.driver.home.RegisterDriverFragment"
@@ -32,5 +37,19 @@
         <action
             android:id="@+id/action_registerDriverFragment_to_driverHomeFragment"
             app:destination="@id/driverHomeFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.example.uniride.chats.ChatFragment"
+        android:label="Chat"
+        tools:layout="@layout/fragment_chat">
+
+        <argument
+            android:name="receiverId"
+            app:argType="string" />
+
+        <argument
+            android:name="receiverName"
+            app:argType="string" />
     </fragment>
 </navigation>
