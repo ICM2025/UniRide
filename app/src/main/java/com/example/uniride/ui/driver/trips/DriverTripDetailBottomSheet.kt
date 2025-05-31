@@ -17,9 +17,13 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.domain.model.DriverTripItem
+import com.example.uniride.domain.model.Route
+import com.example.uniride.domain.model.StopInRoute
+import com.example.uniride.domain.model.Trip
 import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
+import com.google.firebase.firestore.FirebaseFirestore
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -197,25 +201,108 @@ class DriverTripDetailBottomSheet(
         editor.putBoolean("HAS_ACTIVE_ROUTE", true)
         editor.putString("ACTIVE_TRIP_ID", tripId)
 
-        // Copiar los datos de este viaje específico a las claves que usa el mapa
-        editor.putString("ROUTE_ORIGIN", sharedPreferences.getString("TRIP_${tripId}_ORIGIN", ""))
-        editor.putString("ROUTE_DESTINATION", sharedPreferences.getString("TRIP_${tripId}_DESTINATION", ""))
-        editor.putInt("ROUTE_STOPS_COUNT", sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0))
-        editor.putLong("ROUTE_DATETIME", sharedPreferences.getLong("TRIP_${tripId}_DATETIME", System.currentTimeMillis())) // Nueva línea
+        // NUEVO: Obtener datos del viaje desde Firebase usando el tripId
+        val db = FirebaseFirestore.getInstance()
+        db.collection("Trips").document(tripId)
+            .get()
+            .addOnSuccessListener { tripDoc ->
+                val trip = tripDoc.toObject(Trip::class.java)
+                if (trip != null) {
+                    // Obtener datos de la ruta
+                    db.collection("Routes").document(trip.idRoute)
+                        .get()
+                        .addOnSuccessListener { routeDoc ->
+                            val route = routeDoc.toObject(Route::class.java)
+                            if (route != null) {
+                                // Obtener nombres de origen y destino
+                                fetchStopNames(route.idOrigin, route.idDestination) { origin, destination ->
+                                    // Guardar datos de la ruta activa
+                                    editor.putString("ROUTE_ORIGIN", origin)
+                                    editor.putString("ROUTE_DESTINATION", destination)
 
-        // Copiar cada parada
-        val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
-        for (i in 0 until stopsCount) {
-            editor.putString("ROUTE_STOP_$i", sharedPreferences.getString("TRIP_${tripId}_STOP_$i", ""))
+                                    // Obtener y guardar paradas intermedias
+                                    fetchIntermediateStops(trip.idRoute) { stops ->
+                                        editor.putInt("ROUTE_STOPS_COUNT", stops.size)
+                                        stops.forEachIndexed { index, stopName ->
+                                            editor.putString("ROUTE_STOP_$index", stopName)
+                                        }
+
+                                        editor.putLong("ROUTE_DATETIME", System.currentTimeMillis())
+                                        editor.putString("TRIP_${tripId}_ACTUAL_START_TIME",
+                                            LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")))
+
+                                        editor.apply()
+
+                                        showSuccessDialog()
+                                    }
+                                }
+                            }
+                        }
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al obtener datos del viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun fetchStopNames(originId: String, destinationId: String, onResult: (String, String) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("Stops").document(originId).get().addOnSuccessListener { originSnap ->
+            val originName = originSnap.getString("name") ?: "Origen"
+
+            db.collection("Stops").document(destinationId).get().addOnSuccessListener { destSnap ->
+                val destName = destSnap.getString("name") ?: "Destino"
+                onResult(originName, destName)
+            }
         }
+    }
 
-        // Guardar hora de inicio real
-        editor.putString("TRIP_${tripId}_ACTUAL_START_TIME",
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")))
+    // NUEVO: Método para obtener paradas intermedias
+    private fun fetchIntermediateStops(routeId: String, onResult: (List<String>) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("StopsInRoute")
+            .whereEqualTo("idRoute", routeId)
+            .orderBy("position")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val stopIds = snapshot.documents.mapNotNull {
+                    it.toObject(StopInRoute::class.java)?.idStop
+                }
 
-        editor.apply()
+                if (stopIds.isEmpty()) {
+                    onResult(emptyList())
+                    return@addOnSuccessListener
+                }
 
-        // Mostrar diálogo de confirmación
+                val stopNames = mutableListOf<String>()
+                var completedCount = 0
+
+                stopIds.forEach { stopId ->
+                    db.collection("Stops").document(stopId).get()
+                        .addOnSuccessListener { stopDoc ->
+                            val stopName = stopDoc.getString("name") ?: "Parada"
+                            stopNames.add(stopName)
+                            completedCount++
+
+                            if (completedCount == stopIds.size) {
+                                onResult(stopNames)
+                            }
+                        }
+                        .addOnFailureListener {
+                            completedCount++
+                            if (completedCount == stopIds.size) {
+                                onResult(stopNames)
+                            }
+                        }
+                }
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
+    // NUEVO: Método para mostrar diálogo de éxito
+    private fun showSuccessDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
         dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje iniciado!"
         dialogView.findViewById<TextView>(R.id.tv_secondary).text = "Tu viaje ha comenzado exitosamente"
@@ -235,7 +322,6 @@ class DriverTripDetailBottomSheet(
             try {
                 parentFragment?.findNavController()?.navigate(R.id.nav_home)
             } catch (e: Exception) {
-                // Si no funciona la navegación, intentar con el activity
                 (requireActivity() as? androidx.navigation.NavController)?.let { navController ->
                     navController.navigate(R.id.driverHomeFragment)
                 }

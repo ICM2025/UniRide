@@ -142,6 +142,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                     binding.btnPublishTrip.visibility = View.VISIBLE
                     mapFragment?.view?.visibility = View.VISIBLE
 
+                    updatePublishTripButton()
+
                     // mostrar el menú inferior
                     requireActivity().findViewById<BottomNavigationView>(R.id.bottom_nav)
                         ?.visibility = View.VISIBLE
@@ -207,6 +209,14 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     }
 
+    private fun updatePublishTripButton() {
+        if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
+            binding.btnPublishTrip.visibility = View.GONE
+        } else {
+            binding.btnPublishTrip.visibility = View.VISIBLE
+            binding.btnPublishTrip.text = "Publicar Viaje"
+        }
+    }
 
     private fun setupPermissionLauncher() {
         requestPermissionLauncher = registerForActivityResult(
@@ -317,13 +327,15 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             if (result.resultCode == android.app.Activity.RESULT_OK) {
             }
         }}
-
+/*
     private fun updateUIForActiveRoute() {
         if (sharedPreferences.getBoolean("HAS_PUBLISHED_ROUTE", false)) {
             binding.btnPublishTrip.text = "Editar Viaje"
             preventLocationCameraUpdate = true
         }
     }
+
+ */
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
@@ -350,7 +362,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             // Si no hay permisos, usar ubicación por defecto
             mMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15f))
         }
-        updateUIForActiveRoute()
+        updatePublishTripButton()
 
         if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
             loadRouteAndDisplay()
@@ -679,11 +691,14 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             getCurrentLocationAndCenter()
         }
 
+        // MODIFICADO: Actualizar el estado del botón al resumir
+        updatePublishTripButton()
+
         if (sharedPreferences.getBoolean("HAS_ACTIVE_ROUTE", false)) {
             if (!isRouteDisplayed && mMap != null) {
                 loadRouteAndDisplay()
             }
-        }else {
+        } else {
             // Si no hay ruta activa, limpiar el mapa
             mMap?.clear()
             routePolyline?.remove()
@@ -691,8 +706,6 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             isRouteDisplayed = false
             preventLocationCameraUpdate = false
         }
-
-        updateUIForActiveRoute()
     }
 
     override fun onPause() {

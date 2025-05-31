@@ -108,7 +108,7 @@ class DriverTripsFragment : Fragment() {
                                     pendingCount = 2,
                                     isFull = false,
                                     hasNewMessages = false,
-                                    tripId = trip.id ?: ""
+                                    tripId = trip.id ?: "" // Usar el ID del documento de Firebase
                                 )
 
                                 items.add(item)
