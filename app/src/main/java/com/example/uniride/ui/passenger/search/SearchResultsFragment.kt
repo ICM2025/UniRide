@@ -566,11 +566,21 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
                 }
             }
         }
-
+        //boton para cerrar los detalles del viaje elegido
         val btnClose = detailView.findViewById<ImageView>(R.id.btnClose)
         btnClose?.setOnClickListener {
             detailView.visibility = View.GONE
             view.findViewById<RecyclerView>(R.id.rv_options)?.visibility = View.VISIBLE
+        }
+        val btnMessage = detailView.findViewById<Button>(R.id.btnMessage)
+        btnMessage.setOnClickListener {
+            //poner logica de contactar al conductor
+            val action = SearchResultsFragmentDirections
+                .actionSearchResultsFragmentToChatFragment(
+                    receiverId = tripDetail.driverUser.id,
+                    receiverName = tripDetail.driverUser.username
+                )
+            findNavController().navigate(action)
         }
     }
 
