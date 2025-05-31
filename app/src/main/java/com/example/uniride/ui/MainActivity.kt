@@ -111,13 +111,44 @@ class MainActivity : AppCompatActivity() {
             sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
         }
 
+        val typeFromNotification = intent.getStringExtra("typeFromNotification")
+        val destinationFromNotification = intent.getIntExtra("destinationFromNotification", -1)
+
+        if (typeFromNotification == "solicitud_cupo") {
+            viewModel.switchToDriver()
+        }
 
         lifecycleScope.launch {
             viewModel.isPassengerMode.collectLatest { isPassengerMode ->
                 setupNavigation(isPassengerMode)
+
+                val isCorrectGraph = when (typeFromNotification) {
+                    "solicitud_cupo" -> !isPassengerMode
+                    else -> isPassengerMode
+                }
+
+                if (destinationFromNotification != -1 && isCorrectGraph) {
+                    navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
+                        override fun onDestinationChanged(
+                            controller: NavController,
+                            destination: androidx.navigation.NavDestination,
+                            arguments: Bundle?
+                        ) {
+                            controller.removeOnDestinationChangedListener(this)
+                            try {
+                                controller.navigate(destinationFromNotification)
+                                intent.removeExtra("destinationFromNotification")
+                                Log.d("MainActivity", "Navegando a destino desde notificación: $destinationFromNotification")
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error al navegar desde notificación", e)
+                            }
+                        }
+                    })
+                }
             }
         }
     }
+
 
     private fun setupDrawerItemClicks() {
         // acá van los listeners del drawer

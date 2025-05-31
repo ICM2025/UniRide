@@ -15,17 +15,17 @@ class PassengerDrawerFlowActivity : AppCompatActivity() {
         binding = ActivityPassengerDrawerFlowBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        //configurar navhost
-        val navHostFragment =
-            supportFragmentManager.findFragmentById(R.id.passenger_drawer_nav_host) as NavHostFragment
+        // 1. Obtener el navHost y navController
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.passenger_drawer_nav_host) as NavHostFragment
         val navController = navHostFragment.navController
 
-        // cargar grafo
+        // 2. Cargar el grafo sin modificar el startDestination
         navController.setGraph(R.navigation.passenger_drawer_nav_graph, null)
 
-        // navegar al destino indicado por parámetro
-        val destinationId = intent.getIntExtra("destination", R.id.passengerProfileFragment)
-        if (destinationId != navController.graph.startDestinationId) {
+        // 3. Si se recibió un destino desde el intent, navegar manualmente
+        val destinationId = intent.getIntExtra("destination", -1)
+        if (destinationId != -1 && destinationId != navController.graph.startDestinationId) {
             navController.navigate(destinationId)
         }
     }

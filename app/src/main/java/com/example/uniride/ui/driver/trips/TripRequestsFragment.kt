@@ -18,6 +18,7 @@ import com.example.uniride.domain.model.Route
 import com.example.uniride.domain.model.Stop
 import com.example.uniride.domain.model.Trip
 import com.example.uniride.domain.model.User
+import com.example.uniride.messaging.NotificationSender
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -168,19 +169,37 @@ class TripRequestsFragment : Fragment() {
         )
         binding.rvPassengerRequests.adapter = adapter
     }
-
     private fun acceptPassengerRequest(request: PassengerRequestOLD) {
-        // Encontrar la solicitud real en Firebase usando el nombre del pasajero
         findPassengerRequestByName(request.passengerName) { passengerRequest ->
             if (passengerRequest != null) {
-                // Actualizar status a ACCEPTED
                 db.collection("PassengerRequests").document(passengerRequest.id)
                     .update("status", RequestStatus.ACCEPTED.name)
                     .addOnSuccessListener {
-                        // Decrementar cupos disponibles del trip
                         decrementTripSeats(passengerRequest.idTrip) {
                             Toast.makeText(requireContext(), "Aceptaste a ${request.passengerName}", Toast.LENGTH_SHORT).show()
-                            loadPassengerRequests() // Recargar lista
+                            loadPassengerRequests()
+
+                            // Obtener el token del pasajero
+                            obtenerTokenDelPasajero(passengerRequest.idUser) { token ->
+                                if (token != null) {
+                                    // Obtener el nombre del conductor autenticado
+                                    obtenerNombreDelConductor { nombreConductor ->
+                                        if (nombreConductor != null) {
+                                            NotificationSender.enviar(
+                                                tokenDestino = token,
+                                                tipo = "aceptado",
+                                                fromName = nombreConductor
+                                            ) { success ->
+                                                if (success) {
+                                                    println("Notificación enviada al pasajero")
+                                                } else {
+                                                    println("Falló el envío de la notificación")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     .addOnFailureListener {
@@ -189,16 +208,36 @@ class TripRequestsFragment : Fragment() {
             }
         }
     }
-
     private fun rejectPassengerRequest(request: PassengerRequestOLD) {
         findPassengerRequestByName(request.passengerName) { passengerRequest ->
             if (passengerRequest != null) {
-                // Actualizar status a REJECTED
                 db.collection("PassengerRequests").document(passengerRequest.id)
                     .update("status", RequestStatus.REJECTED.name)
                     .addOnSuccessListener {
                         Toast.makeText(requireContext(), "Rechazaste a ${request.passengerName}", Toast.LENGTH_SHORT).show()
-                        loadPassengerRequests() // Recargar lista
+                        loadPassengerRequests()
+
+                        // Obtener el token del pasajero
+                        obtenerTokenDelPasajero(passengerRequest.idUser) { token ->
+                            if (token != null) {
+                                // Obtener el nombre real del conductor
+                                obtenerNombreDelConductor { nombreConductor ->
+                                    if (nombreConductor != null) {
+                                        NotificationSender.enviar(
+                                            tokenDestino = token,
+                                            tipo = "rechazado",
+                                            fromName = nombreConductor
+                                        ) { success ->
+                                            if (success) {
+                                                println("Notificación de rechazo enviada")
+                                            } else {
+                                                println("Falló la notificación de rechazo")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     .addOnFailureListener {
                         Toast.makeText(requireContext(), "Error al rechazar solicitud", Toast.LENGTH_SHORT).show()
@@ -264,4 +303,29 @@ class TripRequestsFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+    //para la notificaciones
+    private fun obtenerTokenDelPasajero(userId: String, callback: (String?) -> Unit) {
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                val token = document.getString("token")
+                callback(token)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+    }
+    //para la notificación
+    private fun obtenerNombreDelConductor(callback: (String?) -> Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return callback(null)
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { snapshot ->
+                val nombre = snapshot.getString("username") // o "name", según tu estructura
+                callback(nombre)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+    }
+
+
 }
