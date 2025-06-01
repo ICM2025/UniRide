@@ -18,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.example.uniride.R
+import com.example.uniride.chats.ChatsActivity
 import com.example.uniride.databinding.ActivityMainBinding
 import com.example.uniride.domain.model.DrawerOption
 import com.example.uniride.ui.auth.AuthActivity
@@ -78,12 +79,14 @@ class MainActivity : AppCompatActivity() {
     private val passengerOptions = listOf(
         DrawerOption.Profile,
         DrawerOption.Settings,
+        DrawerOption.Chats,
         DrawerOption.About,
         DrawerOption.Logout
     )
     private val driverOptions = listOf(
         DrawerOption.Profile,
         DrawerOption.Settings,
+        DrawerOption.Chats,
         DrawerOption.About,
         DrawerOption.ManageVehicles,
         DrawerOption.Statistics,
@@ -197,6 +200,12 @@ class MainActivity : AppCompatActivity() {
                     FirebaseAuth.getInstance().signOut()
                     startActivity(Intent(this, AuthActivity::class.java))
                     finish()
+                    return@setNavigationItemSelectedListener true
+                }
+                DrawerOption.Chats.id -> {
+                    val intent = Intent(this, ChatsActivity::class.java)
+                    startActivity(intent)
+                    binding.drawerLayout.closeDrawer(GravityCompat.START)
                     return@setNavigationItemSelectedListener true
                 }
 

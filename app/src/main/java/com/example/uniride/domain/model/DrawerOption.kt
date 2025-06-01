@@ -11,6 +11,7 @@ sealed class DrawerOption(
     object Settings : DrawerOption(2, "Configuraciones", R.drawable.ic_settings)
     object Logout : DrawerOption(3, "Cerrar sesión", R.drawable.ic_logout)
     object About : DrawerOption(6, "Acerca de", R.drawable.ic_about)
+    object Chats : DrawerOption(7, "chats", R.drawable.burbuja_de_dialogo)
 
     // Solo para conductor
     object ManageVehicles : DrawerOption(4, "Gestionar vehículos", R.drawable.ic_car)

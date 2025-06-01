@@ -30,6 +30,8 @@ class ChatFragment : Fragment() {
     private var receptorUid: String? = null
     private var receptorNombre: String? = null
 
+    lateinit var mensajesListener: ChildEventListener
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
@@ -52,7 +54,7 @@ class ChatFragment : Fragment() {
         val miUid = auth.currentUser?.uid ?: return
 
         // Establecer ID único para el chat entre estos dos usuarios
-        chatId = if (miUid < receptorUid!!) "$miUid$receptorUid" else "$receptorUid$miUid"
+        chatId = if (miUid < receptorUid!!) "${miUid}_$receptorUid" else "${receptorUid}_$miUid"
 
         binding.chatTitle.text = "Chat con: $receptorNombre"
 
@@ -83,7 +85,8 @@ class ChatFragment : Fragment() {
 
     private fun escucharMensajes() {
         val ref = db.getReference("chats/$chatId/mensajes")
-        ref.addChildEventListener(object : ChildEventListener {
+
+        mensajesListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 val mensaje = snapshot.getValue(Mensaje::class.java)
                 if (mensaje != null) {
@@ -97,11 +100,16 @@ class ChatFragment : Fragment() {
             override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {}
             override fun onChildRemoved(snapshot: DataSnapshot) {}
             override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
-        })
+        }
+
+        ref.addChildEventListener(mensajesListener)
     }
 
+
     override fun onDestroyView() {
-        super.onDestroyView()
+        db.getReference("chats/$chatId/mensajes").removeEventListener(mensajesListener)
         _binding = null
+        super.onDestroyView()
     }
+
 }
