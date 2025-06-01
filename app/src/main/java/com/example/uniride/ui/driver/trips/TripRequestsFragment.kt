@@ -335,7 +335,7 @@ class TripRequestsFragment : Fragment() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return callback(null)
         db.collection("users").document(userId).get()
             .addOnSuccessListener { snapshot ->
-                val nombre = snapshot.getString("username") // o "name", según tu estructura
+                val nombre = snapshot.getString("username")
                 callback(nombre)
             }
             .addOnFailureListener {

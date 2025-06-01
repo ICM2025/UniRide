@@ -25,16 +25,27 @@ exports.sendCustomNotification = functions.https.onRequest(async (req, res) => {
       title = "Solicitud rechazada";
       body = `${fromName} rechazó tu solicitud de cupo.`;
       break;
+    case "mensaje":
+      title = `${fromName} te envió un mensaje`;
+      body = req.body.preview?.substring(0, 100) || "Nuevo mensaje";
+      break;
+      
     default:
       title = "Notificación";
       body = `Tienes una nueva notificación de ${fromName}`;
   }
-
   const message = {
-    notification: { title, body },
-    data: { type },
-    token,
+  notification: { title, body },
+  data: {
+    type,
+    receiverId: req.body.receiverId || "",
+    receiverName: req.body.fromName || "",
+    preview: req.body.preview || ""
+  },
+  token,
   };
+
+
 
   try {
     const response = await admin.messaging().send(message);

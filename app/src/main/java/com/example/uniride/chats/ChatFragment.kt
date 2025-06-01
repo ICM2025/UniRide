@@ -1,6 +1,7 @@
 package com.example.uniride.chats
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,11 +10,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.uniride.databinding.FragmentChatBinding
 import com.example.uniride.domain.adapter.MensajesAdapter
 import com.example.uniride.domain.model.Mensaje
+import com.example.uniride.messaging.NotificationSender
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
 
 class ChatFragment : Fragment() {
 
@@ -30,7 +33,9 @@ class ChatFragment : Fragment() {
     private var receptorUid: String? = null
     private var receptorNombre: String? = null
 
-    lateinit var mensajesListener: ChildEventListener
+    private lateinit var mensajesListener: ChildEventListener
+
+    private val db2 = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +60,7 @@ class ChatFragment : Fragment() {
 
         // Establecer ID único para el chat entre estos dos usuarios
         chatId = if (miUid < receptorUid!!) "${miUid}_$receptorUid" else "${receptorUid}_$miUid"
+        Log.d("chatid", "el chat id es: $chatId")
 
         binding.chatTitle.text = "Chat con: $receptorNombre"
 
@@ -68,6 +74,22 @@ class ChatFragment : Fragment() {
             val texto = binding.mensajeEditText.text.toString().trim()
             if (texto.isNotEmpty()) {
                 enviarMensaje(texto)
+                obtenerTokenDelReceptor(receptorUid!!){ token ->
+                    if (token != null){
+                        obtenerNombreDelUsuario { nombre ->
+                            if(nombre != null){
+                                NotificationSender.enviar(token, "mensaje", nombre, miUid, nombre, texto){
+                                    success ->
+                                    if(success){
+                                        Log.d("mensaje", "mensaje enviado correctamente al token: $token")
+                                    }else
+                                        Log.e("mensaje","mensaje no fue enviado")
+                                }
+                            }
+                        }
+                    }
+
+                }
                 binding.mensajeEditText.text.clear()
             }
         }
@@ -110,6 +132,30 @@ class ChatFragment : Fragment() {
         db.getReference("chats/$chatId/mensajes").removeEventListener(mensajesListener)
         _binding = null
         super.onDestroyView()
+    }
+    //para la notificaciones
+    private fun obtenerTokenDelReceptor(userId: String, callback: (String?) -> Unit) {
+        db2.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                val token = document.getString("token")
+                callback(token)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+
+    }
+    //para la notificación
+    private fun obtenerNombreDelUsuario(callback: (String?) -> Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return callback(null)
+        db2.collection("users").document(userId).get()
+            .addOnSuccessListener { snapshot ->
+                val nombre = snapshot.getString("username")
+                callback(nombre)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
     }
 
 }

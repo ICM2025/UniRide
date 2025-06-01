@@ -3,6 +3,7 @@ package com.example.uniride.messaging
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.TaskStackBuilder
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -29,7 +30,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val body = remoteMessage.notification?.body ?: "Tienes una nueva notificación"
         val type = remoteMessage.data["type"] ?: "default"
 
-        showNotification(title, body, type)
+        // Extraer datos personalizados
+        val receiverId = remoteMessage.data["receiverId"]
+        val receiverName = remoteMessage.data["receiverName"]
+        val preview = remoteMessage.data["preview"]
+
+        showNotification(title, body, type, receiverId, receiverName, preview)
     }
 
     override fun onNewToken(token: String) {
@@ -49,26 +55,33 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun showNotification(title: String, message: String, type: String) {
+    private fun showNotification(title: String, message: String, type: String, receiverId: String?, receiverName: String?, preview: String?) {
         val channelId = "default_channel"
 
-        // Determinar el destino en el NavGraph según el tipo de notificación
-        val destination = when (type) {
-            "aceptado", "rechazado" -> R.id.passengerRequestsFragment
-            "solicitud_cupo" -> R.id.tripRequestsFragment
-            else -> R.id.passengerHomeFragment
+        // Intent según tipo de notificación
+        val intent = Intent(this, com.example.uniride.ui.auth.AuthActivity::class.java).apply {
+            //flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+            if (type == "mensaje" && receiverId != null) {
+                putExtra("type", "mensaje")
+                putExtra("receiverId", receiverId)
+                putExtra("receiverName", receiverName)
+            } else {
+                // Otros destinos del flujo de la app
+                val destination = when (type) {
+                    "aceptado", "rechazado" -> R.id.passengerRequestsFragment
+                    "solicitud_cupo" -> R.id.tripRequestsFragment
+                    else -> R.id.passengerHomeFragment
+                }
+                putExtra("destinationFromNotification", destination)
+            }
         }
 
-        // Ir siempre a MainActivity con el destino deseado como extra
-        val intent = Intent(this, com.example.uniride.ui.MainActivity::class.java).apply {
-            putExtra("destinationFromNotification", destination)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        // Este builder crea la pila de actividades correctamente
+        val pendingIntent = TaskStackBuilder.create(this).run {
+            addNextIntentWithParentStack(intent)
+            getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
-
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_car)

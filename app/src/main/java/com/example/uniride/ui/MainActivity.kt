@@ -97,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        Log.d("MainActivity", "Intent extras: ${intent.extras}")
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.main_nav_host)
                 as NavHostFragment
@@ -122,8 +123,22 @@ class MainActivity : AppCompatActivity() {
             sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
         }
 
-        val typeFromNotification = intent.getStringExtra("typeFromNotification")
+        val typeFromNotification = intent.getStringExtra("type")
         val destinationFromNotification = intent.getIntExtra("destinationFromNotification", -1)
+        Log.d("MainActivity", "typeFromNotification: $typeFromNotification, destinationFromNotification: $destinationFromNotification")
+
+        if (typeFromNotification == "mensaje") {
+            val receiverid = intent.getStringExtra("receiverId")
+            val receiverName = intent.getStringExtra("receiverName")
+
+            val intent = Intent(this, ChatsActivity::class.java).apply {
+                putExtra("receiverId", receiverid)
+                putExtra("receiverName", receiverName)
+            }
+
+            startActivity(intent)
+        }
+
 
         if (typeFromNotification == "solicitud_cupo") {
             viewModel.switchToDriver()
@@ -133,12 +148,7 @@ class MainActivity : AppCompatActivity() {
             viewModel.isPassengerMode.collectLatest { isPassengerMode ->
                 setupNavigation(isPassengerMode)
 
-                val isCorrectGraph = when (typeFromNotification) {
-                    "solicitud_cupo" -> !isPassengerMode
-                    else -> isPassengerMode
-                }
-
-                if (destinationFromNotification != -1 && isCorrectGraph) {
+                if (typeFromNotification == "aceptado" || typeFromNotification == "rechazado" || destinationFromNotification != -1) {
                     navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
                         override fun onDestinationChanged(
                             controller: NavController,
@@ -147,7 +157,7 @@ class MainActivity : AppCompatActivity() {
                         ) {
                             controller.removeOnDestinationChangedListener(this)
                             try {
-                                controller.navigate(destinationFromNotification)
+                                controller.navigate(R.id.passengerRequestsFragment)
                                 intent.removeExtra("destinationFromNotification")
                                 Log.d("MainActivity", "Navegando a destino desde notificación: $destinationFromNotification")
                             } catch (e: Exception) {

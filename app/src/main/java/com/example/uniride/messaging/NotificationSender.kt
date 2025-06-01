@@ -1,5 +1,6 @@
 package com.example.uniride.messaging
 
+import android.util.Log
 import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
@@ -11,11 +12,14 @@ object NotificationSender {
     private const val FUNCTION_URL = "https://us-central1-uniride-fed59.cloudfunctions.net/sendCustomNotification"
     private val client = OkHttpClient()
 
-    fun enviar(tokenDestino: String, tipo: String, fromName: String, onResult: (success: Boolean) -> Unit) {
+    fun enviar(tokenDestino: String, tipo: String, fromName: String, receiverId: String? = null, receiverName: String? = null, preview: String? = null, onResult: (success: Boolean) -> Unit) {
         val json = JSONObject().apply {
             put("token", tokenDestino)
             put("type", tipo)
             put("fromName", fromName)
+            receiverId?.let{ put("receiverId", it)}
+            receiverName?.let{ put("receiverName", it)}
+            preview?.let{ put("preview", it)}
         }
 
         val body = json.toString().toRequestBody("application/json".toMediaType())
@@ -27,16 +31,16 @@ object NotificationSender {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                println("❌ Error al enviar notificación: ${e.message}")
+                println("Error al enviar notificación: ${e.message}")
                 onResult(false)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
-                    println("✅ Notificación enviada correctamente")
+                    println("Notificación enviada correctamente")
                     onResult(true)
                 } else {
-                    println("❌ Error en la respuesta: ${response.code}")
+                    println("Error en la respuesta: ${response.code}")
                     onResult(false)
                 }
             }
