@@ -200,89 +200,353 @@ class PublishRouteFragment : Fragment() {
     }
 
     private fun checkEditMode() {
-        // Verificar si venimos del intent de la activity
         val intent = requireActivity().intent
-        val isEditingFromIntent = intent.getBooleanExtra("IS_EDITING", false)
+        isEditing = intent.getBooleanExtra("IS_EDITING", false)
+        editingTripId = intent.getStringExtra("TRIP_ID")
 
-        // También verificar SharedPreferences
-        val isEditingFromPrefs = sharedPreferences.getBoolean("IS_EDITING_TRIP", false)
+        if (isEditing && !editingTripId.isNullOrEmpty()) {
+            loadTripDataFromFirebase()
+            binding.btnContinue.text = "Actualizar viaje"
+        }
+    }
 
-        isEditing = isEditingFromIntent || isEditingFromPrefs
+    private fun loadTripDataFromFirebase() {
+        editingTripId?.let { tripId ->
+            db.collection("Trips").document(tripId)
+                .get()
+                .addOnSuccessListener { tripDoc ->
+                    if (tripDoc.exists()) {
+                        val trip = tripDoc.toObject(Trip::class.java)
+                        trip?.let { loadTripDetails(it) }
+                    } else {
+                        Toast.makeText(requireContext(), "Viaje no encontrado", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .addOnFailureListener {
+                    Toast.makeText(requireContext(), "Error al cargar datos del viaje", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
 
-        if (isEditing) {
-            // Obtener el tripId del intent o SharedPreferences
-            editingTripId = intent.getStringExtra("TRIP_ID")
-                ?: sharedPreferences.getString("EDITING_TRIP_ID", null)
+    private fun loadTripDetails(trip: Trip) {
+        // Cargar datos básicos del viaje
+        binding.inputPrice.setText(trip.price.toString())
+        binding.inputSeats.setText(trip.places.toString())
+        binding.inputDescription.setText(trip.description)
 
-            if (!editingTripId.isNullOrEmpty()) {
-                loadTripDataForEditing()
-                binding.btnContinue.text = "Actualizar viaje"
+        // Cargar fecha y hora
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+            selectedDate.time = dateFormat.parse(trip.date) ?: Calendar.getInstance().time
+            selectedTime.time = timeFormat.parse(trip.startTime) ?: Calendar.getInstance().time
+
+            updateDateTimeDisplay()
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Error al cargar fecha/hora", Toast.LENGTH_SHORT).show()
+        }
+
+        // Cargar vehículo seleccionado
+        loadVehicleSelection(trip.idCar)
+
+        // Cargar ruta (origen, destino y paradas)
+        loadRouteData(trip.idRoute)
+    }
+
+    private fun loadVehicleSelection(carId: String) {
+        // Esperar a que se carguen los vehículos y luego seleccionar
+        loadVehiclesFromFirestore { vehicles ->
+            vehicleList = vehicles
+            setupVehicleSpinnerWithSelection(carId)
+        }
+    }
+
+    private fun setupVehicleSpinnerWithSelection(preselectCarId: String? = null) {
+        val vehicleNames = mutableListOf("Seleccionar un vehículo")
+        if (vehicleList.isNotEmpty()) {
+            vehicleNames.addAll(vehicleList.map { "${it.brand} ${it.model} (${it.licensePlate})" })
+        }
+        vehicleNames.add("Agregar vehículo")
+
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerCar.adapter = adapter
+
+        // Preseleccionar por ID del carro
+        if (!preselectCarId.isNullOrEmpty()) {
+            val index = vehicleList.indexOfFirst { it.id == preselectCarId }
+            if (index != -1) {
+                binding.spinnerCar.setSelection(index + 1)
+                selectedCar = vehicleList[index]
+            }
+        }
+
+        binding.spinnerCar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selected = parent.getItemAtPosition(position).toString()
+                when (selected) {
+                    "Agregar vehículo" -> findNavController()
+                        .navigate(R.id.action_publishRouteFragment_to_addVehicleFragment)
+                    "Seleccionar un vehículo" -> selectedCar = null
+                    else -> {
+                        selectedCar = if (position > 0 && position <= vehicleList.size) {
+                            vehicleList[position - 1]
+                        } else null
+                    }
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
+    private fun loadRouteData(routeId: String) {
+        // Primero obtener la ruta
+        db.collection("Routes").document(routeId)
+            .get()
+            .addOnSuccessListener { routeDoc ->
+                if (routeDoc.exists()) {
+                    val route = routeDoc.toObject(Route::class.java)
+                    route?.let {
+                        // Cargar paradas ordenadas por posición
+                        db.collection("StopsInRoute")
+                            .whereEqualTo("idRoute", route.id)
+                            .orderBy("position")
+                            .get()
+                            .addOnSuccessListener { stopsInRoute ->
+                                val stopIds = stopsInRoute.documents.mapNotNull { doc ->
+                                    doc.toObject(StopInRoute::class.java)?.idStop
+                                }
+
+                                // Verificar que tenemos paradas
+                                if (stopIds.isNotEmpty()) {
+                                    loadStopNames(stopIds)
+                                } else {
+                                    Toast.makeText(requireContext(), "No se encontraron paradas para esta ruta", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(requireContext(), "Error al cargar paradas de la ruta", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Ruta no encontrada", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar ruta", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun loadIntermediateStopsInUI(intermediateStops: List<String>) {
+        // Limpiar paradas existentes
+        binding.stopsContainer.removeAllViews()
+
+        // Si hay paradas intermedias, crearlas
+        if (intermediateStops.isNotEmpty()) {
+            intermediateStops.forEach { stopName ->
+                addNewStopField()
+                val lastStopView = binding.stopsContainer.getChildAt(binding.stopsContainer.childCount - 1)
+                val stopEditText = lastStopView.findViewById<EditText>(R.id.et_stop)
+                stopEditText.setText(stopName)
+            }
+        }
+
+        // Siempre agregar al menos un campo vacío para nuevas paradas
+        addNewStopField()
+    }
+
+    private fun loadStopNames(stopIds: List<String>) {
+        if (stopIds.isEmpty()) return
+
+        val tasks = stopIds.map { stopId ->
+            db.collection("Stops").document(stopId).get()
+        }
+
+        Tasks.whenAllComplete(tasks)
+            .addOnSuccessListener { results ->
+                val stops = results.mapIndexedNotNull { index, task ->
+                    if (task.isSuccessful) {
+                        val stopDoc = task.result as? com.google.firebase.firestore.DocumentSnapshot
+                        stopDoc?.toObject(Stop::class.java)?.let { stop ->
+                            stop.copy(id = stopDoc.id)
+                        }
+                    } else null
+                }
+
+                // Asegurar que tenemos al menos origen y destino
+                if (stops.size >= 2) {
+                    // El primer elemento es origen, el último es destino
+                    val origin = stops.first()
+                    val destination = stops.last()
+
+                    // Poblar los campos de origen y destino
+                    binding.inputOrigin.setText(origin.name)
+                    binding.inputDestination.setText(destination.name)
+
+                    // Las paradas intermedias (si las hay)
+                    val intermediateStops = stops.drop(1).dropLast(1)
+                    loadIntermediateStopsInUI(intermediateStops.map { it.name })
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar nombres de paradas", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun updateTripInFirebase(origin: String, destination: String, stops: List<String>) {
+        editingTripId?.let { tripId ->
+
+            // Primero crear/obtener las paradas
+            getOrCreateStopByName(origin) { originStop ->
+                if (originStop == null) return@getOrCreateStopByName
+
+                getOrCreateStopByName(destination) { destinationStop ->
+                    if (destinationStop == null) return@getOrCreateStopByName
+
+                    getOrCreateIntermediateStops(stops) { intermediateStops ->
+
+                        // Obtener el viaje actual para obtener su routeId
+                        db.collection("Trips").document(tripId)
+                            .get()
+                            .addOnSuccessListener { tripDoc ->
+                                val currentTrip = tripDoc.toObject(Trip::class.java)
+                                if (currentTrip != null) {
+                                    updateRouteAndTrip(currentTrip, originStop, destinationStop, intermediateStops)
+                                }
+                            }
+                    }
+                }
             }
         }
     }
 
-    private fun loadTripDataForEditing() {
-        editingTripId?.let { tripId ->
-            // Cargar datos del viaje a editar usando las claves correctas
-            val origin = sharedPreferences.getString("EDIT_ROUTE_ORIGIN", "")
-                ?: sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "")
+    private fun updateRouteAndTrip(
+        currentTrip: Trip,
+        originStop: Stop,
+        destinationStop: Stop,
+        intermediateStops: List<Stop>
+    ) {
+        val routeId = currentTrip.idRoute
 
-            val destination = sharedPreferences.getString("EDIT_ROUTE_DESTINATION", "")
-                ?: sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "")
+        // Actualizar la ruta
+        val routeUpdates = mapOf(
+            "idOrigin" to (originStop.id ?: ""),
+            "idDestination" to (destinationStop.id ?: "")
+        )
 
-            val stopsCount = sharedPreferences.getInt("EDIT_ROUTE_STOPS_COUNT", 0).takeIf { it > 0 }
-                ?: sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
+        db.collection("Routes").document(routeId)
+            .update(routeUpdates)
+            .addOnSuccessListener {
+                // Eliminar paradas antiguas de la ruta
+                db.collection("StopsInRoute")
+                    .whereEqualTo("idRoute", routeId)
+                    .get()
+                    .addOnSuccessListener { oldStops ->
+                        // Eliminar paradas antiguas
+                        val deleteTasks = oldStops.documents.map { it.reference.delete() }
 
-            // Cargar fecha y hora guardadas
-            val savedDate = sharedPreferences.getString("TRIP_${tripId}_DATE", "")
-            val savedTime = sharedPreferences.getString("TRIP_${tripId}_TIME", "")
-
-            // Establecer los valores en los campos de texto
-            binding.inputOrigin.setText(origin)
-            binding.inputDestination.setText(destination)
-
-            // Establecer fecha y hora si existen
-            if (!savedDate.isNullOrEmpty()) {
-                binding.inputDate.setText(savedDate)
-                try {
-                    selectedDate.time = dateFormat.parse(savedDate) ?: Calendar.getInstance().time
-                } catch (e: Exception) {
-                    selectedDate = Calendar.getInstance()
-                }
+                        Tasks.whenAllComplete(deleteTasks)
+                            .addOnSuccessListener {
+                                // Agregar nuevas paradas
+                                addNewStopsToRoute(routeId, originStop, destinationStop, intermediateStops) {
+                                    updateTripDetails(currentTrip.id.toString())
+                                }
+                            }
+                    }
             }
+    }
 
-            if (!savedTime.isNullOrEmpty()) {
-                binding.inputTime.setText(savedTime)
-                try {
-                    val timeCalendar = Calendar.getInstance()
-                    timeCalendar.time = timeFormat.parse(savedTime) ?: Calendar.getInstance().time
-                    selectedTime.set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY))
-                    selectedTime.set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
-                } catch (e: Exception) {
-                    selectedTime = Calendar.getInstance()
-                }
+    private fun addNewStopsToRoute(
+        routeId: String,
+        originStop: Stop,
+        destinationStop: Stop,
+        intermediateStops: List<Stop>,
+        onComplete: () -> Unit
+    ) {
+        val allStopsOrdered = listOf(originStop) + intermediateStops + listOf(destinationStop)
+        val stopsInRouteRef = db.collection("StopsInRoute")
+
+        val tasks = allStopsOrdered.mapIndexed { index, stop ->
+            val stopInRoute = StopInRoute(
+                idRoute = routeId,
+                idStop = stop.id ?: "",
+                position = index
+            )
+            stopsInRouteRef.add(stopInRoute)
+        }
+
+        Tasks.whenAllComplete(tasks)
+            .addOnSuccessListener {
+                onComplete()
             }
-
-            // Limpiar stops existentes
-            stopsList.clear()
-            binding.stopsContainer.removeAllViews()
-
-            // Cargar paradas existentes
-            for (i in 0 until stopsCount) {
-                val stop = sharedPreferences.getString("EDIT_ROUTE_STOP_$i", "")
-                    ?: sharedPreferences.getString("TRIP_${tripId}_STOP_$i", "")
-
-                if (!stop.isNullOrEmpty()) {
-                    addNewStopField()
-                    val lastStopView = binding.stopsContainer.getChildAt(binding.stopsContainer.childCount - 1)
-                    val stopEditText = lastStopView.findViewById<EditText>(R.id.et_stop)
-                    stopEditText.setText(stop)
-                }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al actualizar paradas", Toast.LENGTH_SHORT).show()
             }
+    }
 
-            // Si no hay paradas, agregar un campo vacío por defecto
-            if (binding.stopsContainer.childCount == 0) {
-                addNewStopField()
+    private fun updateTripDetails(tripId: String) {
+        val price = binding.inputPrice.text.toString().toDoubleOrNull() ?: 0.0
+        val places = binding.inputSeats.text.toString().toIntOrNull() ?: 1
+
+        val tripUpdates = mapOf(
+            "idCar" to (selectedCar?.id ?: ""),
+            "description" to binding.inputDescription.text.toString().trim(),
+            "price" to price,
+            "places" to places,
+            "date" to SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selectedDate.time),
+            "startTime" to SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedTime.time),
+            "updatedAt" to Date()
+        )
+
+        db.collection("Trips").document(tripId)
+            .update(tripUpdates)
+            .addOnSuccessListener {
+                showTripUpdateSuccessDialog()
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al actualizar el viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun showTripUpdateSuccessDialog() {
+        val activity = requireActivity()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+
+        dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje actualizado!"
+        dialogView.findViewById<TextView>(R.id.tv_secondary).text = "Los cambios se han guardado exitosamente"
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setDimAmount(0.75f)
+        dialog.show()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            dialog.dismiss()
+            activity.setResult(Activity.RESULT_OK)
+            activity.finish()
+        }, 1500)
+    }
+
+    private fun createNewTrip(origin: String, destination: String, stops: List<String>) {
+        getOrCreateStopByName(origin) { originStop ->
+            if (originStop == null) return@getOrCreateStopByName
+
+            getOrCreateStopByName(destination) { destinationStop ->
+                if (destinationStop == null) return@getOrCreateStopByName
+
+                getOrCreateIntermediateStops(stops) { intermediateStops ->
+                    createRouteWithStops(originStop, destinationStop, intermediateStops,
+                        onSuccess = { routeId ->
+                            createTrip(routeId)
+                        },
+                        onError = {
+                            Toast.makeText(requireContext(), "No se pudo crear la ruta", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
             }
         }
     }
@@ -401,13 +665,12 @@ class PublishRouteFragment : Fragment() {
 
     private fun setupContinueButton() {
         binding.btnContinue.setOnClickListener {
-            //valida que todos los datos estén correctos
             if (!validateTripInputs()) return@setOnClickListener
 
             val originAddress = binding.inputOrigin.text.toString().trim()
             val destinationAddress = binding.inputDestination.text.toString().trim()
 
-            // Recopilar paradas intermedias del formulario
+            // Recopilar paradas intermedias
             stopsList.clear()
             for (i in 0 until binding.stopsContainer.childCount) {
                 val stopView = binding.stopsContainer.getChildAt(i)
@@ -418,125 +681,13 @@ class PublishRouteFragment : Fragment() {
                 }
             }
 
-            // para editar
             if (isEditing && !editingTripId.isNullOrEmpty()) {
-                updateExistingTrip(originAddress, destinationAddress, stopsList,
-                    binding.inputDate.text.toString(), binding.inputTime.text.toString()
-                )
-                showTripSuccessDialog()
-                return@setOnClickListener
+                // Actualizar viaje existente en Firebase
+                updateTripInFirebase(originAddress, destinationAddress, stopsList)
+            } else {
+                // Crear nuevo viaje (código existente)
+                createNewTrip(originAddress, destinationAddress, stopsList)
             }
-
-            // Crear origen y destino
-            getOrCreateStopByName(originAddress) { originStop ->
-                if (originStop == null) return@getOrCreateStopByName
-
-                getOrCreateStopByName(destinationAddress) { destinationStop ->
-                    if (destinationStop == null) return@getOrCreateStopByName
-
-                    // Crear paradas intermedias
-                    getOrCreateIntermediateStops(stopsList) { intermediateStops ->
-
-                        // Crear ruta y las paradas por ruta
-                        createRouteWithStops(originStop, destinationStop, intermediateStops,
-                            onSuccess = { routeId ->
-                                createTrip(routeId)
-                            },
-                            onError = {
-                                Toast.makeText(requireContext(),
-                                    "No se pudo crear la ruta", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-
-
-
-
-    private fun saveRouteData(origin: String, destination: String, stops: List<String>, date: String, time: String) {
-        val editor = sharedPreferences.edit()
-
-        // Generar nuevo ID para viaje nuevo
-        val tripId = System.currentTimeMillis().toString()
-
-        editor.putString("TRIP_${tripId}_ORIGIN", origin)
-        editor.putString("TRIP_${tripId}_DESTINATION", destination)
-        editor.putString("TRIP_${tripId}_DATE", date)
-        editor.putString("TRIP_${tripId}_TIME", time)
-        editor.putInt("TRIP_${tripId}_STOPS_COUNT", stops.size)
-
-        stops.forEachIndexed { index, stop ->
-            editor.putString("TRIP_${tripId}_STOP_$index", stop)
-        }
-
-        // Agregar a la lista de viajes guardados
-        val tripIds = sharedPreferences.getStringSet("SAVED_TRIP_IDS", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-        tripIds.add(tripId)
-        editor.putStringSet("SAVED_TRIP_IDS", tripIds)
-        editor.putBoolean("HAS_PUBLISHED_ROUTE", true)
-
-        editor.apply()
-    }
-
-    private fun updateExistingTrip(origin: String, destination: String, stops: List<String>, date: String, time: String) {
-        editingTripId?.let { tripId ->
-            val editor = sharedPreferences.edit()
-
-            // Limpiar paradas anteriores
-            val oldStopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
-            for (i in 0 until oldStopsCount) {
-                editor.remove("TRIP_${tripId}_STOP_$i")
-            }
-
-            // Actualizar los datos del viaje existente
-            editor.putString("TRIP_${tripId}_ORIGIN", origin)
-            editor.putString("TRIP_${tripId}_DESTINATION", destination)
-            editor.putString("TRIP_${tripId}_DATE", date)
-            editor.putString("TRIP_${tripId}_TIME", time)
-            editor.putInt("TRIP_${tripId}_STOPS_COUNT", stops.size)
-
-            stops.forEachIndexed { index, stop ->
-                editor.putString("TRIP_${tripId}_STOP_$index", stop)
-            }
-
-            // Si este viaje es el activo, actualizar también las rutas activas
-            val activeTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
-            if (activeTripId == tripId) {
-                editor.putString("ROUTE_ORIGIN", origin)
-                editor.putString("ROUTE_DESTINATION", destination)
-                editor.putString("ROUTE_DATE", date)
-                editor.putString("ROUTE_TIME", time)
-                editor.putInt("ROUTE_STOPS_COUNT", stops.size)
-
-                // Limpiar paradas activas anteriores
-                val oldActiveStopsCount = sharedPreferences.getInt("ROUTE_STOPS_COUNT", 0)
-                for (i in 0 until oldActiveStopsCount) {
-                    editor.remove("ROUTE_STOP_$i")
-                }
-
-                // Agregar nuevas paradas activas
-                stops.forEachIndexed { index, stop ->
-                    editor.putString("ROUTE_STOP_$index", stop)
-                }
-            }
-
-            // Limpiar datos temporales de edición
-            editor.remove("IS_EDITING_TRIP")
-            editor.remove("EDITING_TRIP_ID")
-            editor.remove("EDIT_ROUTE_ORIGIN")
-            editor.remove("EDIT_ROUTE_DESTINATION")
-            editor.remove("EDIT_ROUTE_STOPS_COUNT")
-
-            val editStopsCount = sharedPreferences.getInt("EDIT_ROUTE_STOPS_COUNT", 0)
-            for (i in 0 until editStopsCount) {
-                editor.remove("EDIT_ROUTE_STOP_$i")
-            }
-
-            editor.apply()
         }
     }
 
