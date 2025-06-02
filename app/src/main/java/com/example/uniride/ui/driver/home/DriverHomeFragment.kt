@@ -59,6 +59,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private var _binding: FragmentDriverHomeBinding? = null
     private val binding get() = _binding!!
+    private var isDriver: Boolean = false
     private val UPDATE_DISTANCE = 100f
     private var isInActiveTrip = false
     private val FINISH_TRIP_DISTANCE = 100f
@@ -143,6 +144,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         db.collection("drivers").document(uid).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
+                    isDriver = true
                     // si es conductor se muestran los componentes de home
                     binding.btnPublishTrip.visibility = View.VISIBLE
                     mapFragment?.view?.visibility = View.VISIBLE
@@ -216,6 +218,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     private fun updatePublishTripButton() {
+        //Si no es conductor no entra
+        if (!isDriver) return
         checkActiveTrip { hasActiveTrip ->
             if (hasActiveTrip) {
                 binding.btnPublishTrip.visibility = View.GONE
@@ -243,6 +247,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     private fun updateFinishTripButton() {
+        //si no es conductor no entra
+        if (!isDriver) return
         checkActiveTrip { hasActiveTrip ->
             if (hasActiveTrip && isNearDestination) {
                 binding.btnFinishTrip.visibility = View.VISIBLE
