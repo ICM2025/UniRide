@@ -1,7 +1,7 @@
 package com.example.uniride.domain.model
 
 data class Car(
-    val id: String = "",
+    var id: String = "",
     // FK a Driver
     val idDriver: String = "",
     val brand: String = "",
@@ -9,5 +9,5 @@ data class Car(
     val year: Int = 0,
     val color: String = "",
     val licensePlate: String = "",
-    val images: List<String> = emptyList()
+    var images: List<String> = emptyList()
 )
