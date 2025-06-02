@@ -6,14 +6,15 @@ import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.uniride.databinding.ItemTripRequestDriverBinding
-import com.example.uniride.domain.model.PassengerRequest
+import com.example.uniride.domain.model.PassengerRequestOLD
 import com.example.uniride.domain.model.PassengerRequestStatus
 
 class PassengerRequestsAdapter(
-    private val items: List<PassengerRequest>,
-    private val onAccept: (PassengerRequest) -> Unit,
-    private val onReject: (PassengerRequest) -> Unit,
-    private val onClick: (PassengerRequest) -> Unit
+    private val items: List<PassengerRequestOLD>,
+    private val onAccept: (PassengerRequestOLD) -> Unit,
+    private val onReject: (PassengerRequestOLD) -> Unit,
+    private val onClick: (PassengerRequestOLD) -> Unit,
+    private val onMessageClick: (PassengerRequestOLD) -> Unit
 ) : RecyclerView.Adapter<PassengerRequestsAdapter.RequestViewHolder>() {
 
     inner class RequestViewHolder(val binding: ItemTripRequestDriverBinding) :
@@ -51,6 +52,9 @@ class PassengerRequestsAdapter(
         }
         holder.itemView.setOnClickListener {
             onClick(item)
+        }
+        holder.binding.btnMessage.setOnClickListener {
+            onMessageClick(item)
         }
 
     }

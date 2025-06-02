@@ -1,10 +1,16 @@
 package com.example.uniride.ui
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
@@ -12,21 +18,15 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.example.uniride.R
+import com.example.uniride.chats.ChatsActivity
 import com.example.uniride.databinding.ActivityMainBinding
 import com.example.uniride.domain.model.DrawerOption
+import com.example.uniride.ui.auth.AuthActivity
 import com.example.uniride.ui.driver.drawer.DriverDrawerFlowActivity
 import com.example.uniride.ui.passenger.drawer.PassengerDrawerFlowActivity
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import android.content.Context
-import android.content.SharedPreferences
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.util.Log
-import android.widget.Toast
-import com.example.uniride.connection.SupabaseInstance
-import com.example.uniride.ui.auth.AuthActivity
-import io.github.jan.supabase.auth.auth
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity() {
@@ -79,12 +79,14 @@ class MainActivity : AppCompatActivity() {
     private val passengerOptions = listOf(
         DrawerOption.Profile,
         DrawerOption.Settings,
+        DrawerOption.Chats,
         DrawerOption.About,
         DrawerOption.Logout
     )
     private val driverOptions = listOf(
         DrawerOption.Profile,
         DrawerOption.Settings,
+        DrawerOption.Chats,
         DrawerOption.About,
         DrawerOption.ManageVehicles,
         DrawerOption.Statistics,
@@ -95,10 +97,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        Log.d("MainActivity", "Intent extras: ${intent.extras}")
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.main_nav_host)
                 as NavHostFragment
         navController = navHostFragment.navController
+        //para no mostrar los botones cuando entre a un chat.
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.chatFragment -> binding.bottomNav.visibility = View.GONE
+                else -> binding.bottomNav.visibility = View.VISIBLE
+            }
+        }
 
         binding.btnMenu.setOnClickListener {
             binding.drawerLayout.openDrawer(GravityCompat.START)
@@ -113,13 +123,70 @@ class MainActivity : AppCompatActivity() {
             sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
         }
 
+        val typeFromNotification = intent.getStringExtra("type")
+        val destinationFromNotification = intent.getIntExtra("destinationFromNotification", -1)
+        Log.d("MainActivity", "typeFromNotification: $typeFromNotification, destinationFromNotification: $destinationFromNotification")
+
+        if (typeFromNotification == "mensaje") {
+            val receiverid = intent.getStringExtra("receiverId")
+            val receiverName = intent.getStringExtra("receiverName")
+
+            val intent = Intent(this, ChatsActivity::class.java).apply {
+                putExtra("receiverId", receiverid)
+                putExtra("receiverName", receiverName)
+            }
+
+            startActivity(intent)
+        }
+
+
+        if (typeFromNotification == "solicitud_cupo") {
+            viewModel.switchToDriver()
+        }
 
         lifecycleScope.launch {
             viewModel.isPassengerMode.collectLatest { isPassengerMode ->
                 setupNavigation(isPassengerMode)
+
+                if (typeFromNotification == "aceptado" || typeFromNotification == "rechazado" || destinationFromNotification == R.id.passengerRequestsFragment) {
+                    navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
+                        override fun onDestinationChanged(
+                            controller: NavController,
+                            destination: androidx.navigation.NavDestination,
+                            arguments: Bundle?
+                        ) {
+                            controller.removeOnDestinationChangedListener(this)
+                            try {
+                                controller.navigate(R.id.passengerRequestsFragment)
+                                intent.removeExtra("destinationFromNotification")
+                                Log.d("MainActivity", "Navegando a destino desde notificación: $destinationFromNotification")
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error al navegar desde notificación", e)
+                            }
+                        }
+                    })
+                }else if(typeFromNotification == "viaje_iniciado" || typeFromNotification == "viaje_terminado" || typeFromNotification == "viaje_cancelado" ||destinationFromNotification == R.id.passengerHomeFragment ){
+                    navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
+                        override fun onDestinationChanged(
+                            controller: NavController,
+                            destination: androidx.navigation.NavDestination,
+                            arguments: Bundle?
+                        ) {
+                            controller.removeOnDestinationChangedListener(this)
+                            try {
+                                controller.navigate(R.id.passengerHomeFragment)
+                                intent.removeExtra("destinationFromNotification")
+                                Log.d("MainActivity", "Navegando a destino desde notificación: $destinationFromNotification")
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error al navegar desde notificación", e)
+                            }
+                        }
+                    })
+                }
             }
         }
     }
+
 
     private fun setupDrawerItemClicks() {
         // acá van los listeners del drawer
@@ -157,27 +224,18 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 DrawerOption.Logout.id -> {
-                    lifecycleScope.launch{
-                        SupabaseInstance.client.auth.signOut()
-                    }
-                    // Borrar credenciales guardadas
-                    val masterKey = androidx.security.crypto.MasterKey.Builder(this)
-                        .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
-                        .build()
-
-                    val securePrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
-                        this,
-                        "secure_user_prefs",
-                        masterKey,
-                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                        androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                    )
-
-                    securePrefs.edit().clear().apply()
+                    FirebaseAuth.getInstance().signOut()
                     startActivity(Intent(this, AuthActivity::class.java))
                     finish()
                     return@setNavigationItemSelectedListener true
                 }
+                DrawerOption.Chats.id -> {
+                    val intent = Intent(this, ChatsActivity::class.java)
+                    startActivity(intent)
+                    binding.drawerLayout.closeDrawer(GravityCompat.START)
+                    return@setNavigationItemSelectedListener true
+                }
+
 
                 else -> return@setNavigationItemSelectedListener false
             }
@@ -254,5 +312,10 @@ class MainActivity : AppCompatActivity() {
         //dejar de escuchar cambios en el acelerómetro
         sensorManager.unregisterListener(sensorListener)
     }
+
+    fun switchToPassengerMode() {
+        viewModel.switchToPassenger()
+    }
+
 
 }

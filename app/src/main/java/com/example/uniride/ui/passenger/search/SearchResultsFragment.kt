@@ -10,16 +10,30 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentSearchResultsBinding
-import com.example.uniride.domain.adapter.TravelOptionAdapter
+import com.example.uniride.domain.adapter.TripPassengerDetailAdapter
+import com.example.uniride.domain.model.Car
+import com.example.uniride.domain.model.PassengerRequest
+import com.example.uniride.domain.model.RequestStatus
+import com.example.uniride.domain.model.Route
+import com.example.uniride.domain.model.Stop
 import com.example.uniride.domain.model.TravelOption
+import com.example.uniride.domain.model.Trip
+import com.example.uniride.domain.model.User
+import com.example.uniride.domain.model.front.TripInformation
+import com.example.uniride.domain.model.front.TripPassengerDetail
+import com.example.uniride.messaging.NotificationSender
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -29,7 +43,12 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.gms.tasks.Tasks
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -42,7 +61,9 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
     private var _binding: FragmentSearchResultsBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var adapter: TravelOptionAdapter
+    private lateinit var adapter: TripPassengerDetailAdapter
+
+
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<FrameLayout>
 
     // Mapa y componentes de ruta
@@ -92,42 +113,26 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
 
-        // Datos de prueba para la lista de opciones
-        val options = listOf(
-            TravelOption(
-                driverName = "Conductor 1",
-                description = "Rápido y económico",
-                origin = originAddress ?: "Universidad Nacional",
-                destination = destinationAddress ?: "Centro Comercial Santafé",
-                departureTime = "4:30 PM",
-                price = 11500,
-                availableSeats = 2,
-                intermediateStops = listOf("UNAL", "Centro", "Santafé"),
-                drawableResId = R.drawable.ic_car,
-                driverImage = R.drawable.ic_profile,
-                travelDate = LocalDate.parse("2025-05-04")
-            ),
-            TravelOption(
-                driverName = "Conductor 2",
-                description = "Viaje tranquilo",
-                origin = originAddress ?: "Universidad Nacional",
-                destination = destinationAddress ?: "Titan Plaza",
-                departureTime = "4:45 PM",
-                price = 9800,
-                availableSeats = 3,
-                intermediateStops = listOf("UNAL", "Titan"),
-                drawableResId = R.drawable.ic_car,
-                driverImage = R.drawable.ic_profile,
-                travelDate = LocalDate.parse("2025-05-04")
-            )
-        )
-
-        adapter = TravelOptionAdapter(options) { selected ->
-            TravelDetailBottomSheet(selected).show(parentFragmentManager, "TravelDetail")
-        }
-
+        // Configurar RecyclerView
         binding.rvOptions.layoutManager = LinearLayoutManager(requireContext())
-        binding.rvOptions.adapter = adapter
+
+        // Buscar viajes reales
+        val origin = originAddress ?: return
+        val destination = destinationAddress ?: return
+
+        fetchTripsForPassenger(origin, destination) { tripDetails ->
+            if (tripDetails.isEmpty()) {
+                Toast.makeText(requireContext(), "No se encontraron viajes.", Toast.LENGTH_SHORT).show()
+                return@fetchTripsForPassenger
+            }
+
+            adapter = TripPassengerDetailAdapter(tripDetails) { selectedDetail ->
+                showBottomSheet(selectedDetail)
+            }
+
+
+            binding.rvOptions.adapter = adapter
+        }
 
         // Configurar el comportamiento del BottomSheet
         setupBottomSheet()
@@ -140,6 +145,8 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
             findNavController().navigate(R.id.searchInputFragment)
         }
     }
+
+
 
     private fun setupBottomSheet() {
         val bottomSheet = view?.findViewById<FrameLayout>(R.id.standard_bottom_sheet)
@@ -370,4 +377,330 @@ class SearchResultsFragment : Fragment(), OnMapReadyCallback {
         super.onDestroyView()
         _binding = null
     }
+
+
+    //busca todos los trips que estén activos
+    private fun fetchTripsForPassenger(
+        originQuery: String,
+        destinationQuery: String,
+        onResult: (List<TripPassengerDetail>) -> Unit
+    ) {
+        val db = FirebaseFirestore.getInstance()
+        val tripList = mutableListOf<TripPassengerDetail>()
+
+        db.collection("Trips")
+            .whereEqualTo("status", "PENDING")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val trips = snapshot.toObjects(Trip::class.java)
+                if (trips.isEmpty()) {
+                    onResult(emptyList())
+                    return@addOnSuccessListener
+                }
+
+                var completed = 0
+                for (trip in trips) {
+                    loadFullTripData(trip, originQuery, destinationQuery) { item ->
+                        if (item != null) {
+                            tripList.add(item)
+                        }
+                        completed++
+                        if (completed == trips.size) {
+                            onResult(tripList)
+                        }
+                    }
+                }
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
+
+    //filtra según el origen y destino
+    private fun loadFullTripData(
+        trip: Trip,
+        originQuery: String,
+        destinationQuery: String,
+        onValid: (TripPassengerDetail?) -> Unit
+    ) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("Routes").document(trip.idRoute)
+            .get()
+            .addOnSuccessListener { routeSnap ->
+                val route = routeSnap.toObject(Route::class.java) ?: return@addOnSuccessListener onValid(null)
+
+                val originTask = db.collection("Stops").document(route.idOrigin).get()
+                val destinationTask = db.collection("Stops").document(route.idDestination).get()
+
+                Tasks.whenAllSuccess<DocumentSnapshot>(originTask, destinationTask)
+                    .addOnSuccessListener { docs ->
+                        val originStop = docs[0].toObject(Stop::class.java)
+                        val destinationStop = docs[1].toObject(Stop::class.java)
+
+                        if (
+                            originStop?.name == originQuery &&
+                            destinationStop?.name == destinationQuery
+                        ) {
+                            // Buscar paradas intermedias
+                            db.collection("StopsInRoute")
+                                .whereEqualTo("idRoute", route.id)
+                                .get()
+                                .addOnSuccessListener { interSnap ->
+                                    val stopIds = interSnap.mapNotNull { it.getString("idStop") }
+
+                                    if (stopIds.isEmpty()) {
+                                        buildTripPassengerDetail(trip, originStop, destinationStop, emptyList(), onValid)
+                                        return@addOnSuccessListener
+                                    }
+
+                                    db.collection("Stops")
+                                        .whereIn(FieldPath.documentId(), stopIds)
+                                        .get()
+                                        .addOnSuccessListener { interStopsSnap ->
+                                            val intermediateStops = interStopsSnap.toObjects(Stop::class.java)
+                                                .filter { it.name != originStop.name && it.name != destinationStop.name }
+                                            buildTripPassengerDetail(trip, originStop, destinationStop, intermediateStops, onValid)
+                                        }
+                                }
+                        } else {
+                            onValid(null)
+                        }
+                    }
+                    .addOnFailureListener {
+                        onValid(null)
+                    }
+            }
+            .addOnFailureListener {
+                onValid(null)
+            }
+    }
+
+    //carga
+    private fun buildTripPassengerDetail(
+        trip: Trip,
+        originStop: Stop,
+        destinationStop: Stop,
+        intermediateStops: List<Stop>,
+        onReady: (TripPassengerDetail?) -> Unit
+    ) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("Cars").document(trip.idCar).get()
+            .addOnSuccessListener { carSnap ->
+                val car = carSnap.toObject(Car::class.java)
+
+                db.collection("users").document(trip.idDriver).get()
+                    .addOnSuccessListener { userSnap ->
+                        val driver = userSnap.toObject(User::class.java) ?: return@addOnSuccessListener onReady(null)
+
+                        val parsedDate = try {
+                            LocalDate.parse(trip.date)
+                        } catch (e: Exception) {
+                            LocalDate.now()
+                        }
+
+                        val tripInfo = TripInformation(
+                            carIcon = R.drawable.ic_car,
+                            availableSeats = trip.places,
+                            origin = originStop.name,
+                            destination = destinationStop.name,
+                            departureTime = trip.startTime,
+                            travelDate = parsedDate,
+                            price = trip.price,
+                            carName = "${car?.brand} ${car?.model}",
+                            carPlate = car?.licensePlate ?: "Sin placa"
+                        )
+
+                        val detail = TripPassengerDetail(
+                            tripInformation = tripInfo,
+                            driverUser = driver,
+                            intermediateStops = intermediateStops,
+                            tripId = trip.id ?: ""
+                        )
+
+                        onReady(detail)
+                    }
+            }
+            .addOnFailureListener {
+                onReady(null)
+            }
+    }
+
+
+    //mostrar datos del bottom sheet
+    private fun showBottomSheet(tripDetail: TripPassengerDetail) {
+        val view = view ?: return
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+
+        view.findViewById<RecyclerView>(R.id.rv_options)?.visibility = View.GONE
+        val detailView = view.findViewById<View>(R.id.layout_travel_detail) ?: return
+        detailView.visibility = View.VISIBLE
+
+        val info = tripDetail.tripInformation
+        val driver = tripDetail.driverUser
+
+        detailView.findViewById<TextView>(R.id.tvDriverName)?.text = driver.username
+        detailView.findViewById<TextView>(R.id.tvCarPlate)?.text = "Placas: ${info.carPlate}"
+        detailView.findViewById<TextView>(R.id.tvDate)?.text = "Fecha: ${info.travelDate}"
+        detailView.findViewById<TextView>(R.id.tvTime)?.text = "Salida: ${info.departureTime}"
+        detailView.findViewById<TextView>(R.id.tvSeats)?.text = "Cupos disponibles: ${info.availableSeats}"
+        detailView.findViewById<TextView>(R.id.tvRoute)?.text = "Ruta: ${info.origin} → ${info.destination}"
+        detailView.findViewById<TextView>(R.id.tvPrice)?.text = "Precio: $${info.price}"
+
+        val stopsText = tripDetail.intermediateStops
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(", ") { it.name }
+            ?: "-"
+        detailView.findViewById<TextView>(R.id.tvStops)?.text = "Paradas: $stopsText"
+
+        // CAMBIO IMPORTANTE: Usar TravelDetailBottomSheet en lugar del botón inline
+        detailView.findViewById<Button>(R.id.btnRequest)?.setOnClickListener {
+            // Guardar la solicitud en Firebase
+            savePassengerRequest(tripDetail.tripId) { success ->
+                if (success) {
+                    Toast.makeText(requireContext(), "Solicitaste el viaje a ${info.destination}", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "Error al enviar solicitud", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        //boton para cerrar los detalles del viaje elegido
+        val btnClose = detailView.findViewById<ImageView>(R.id.btnClose)
+        btnClose?.setOnClickListener {
+            detailView.visibility = View.GONE
+            view.findViewById<RecyclerView>(R.id.rv_options)?.visibility = View.VISIBLE
+        }
+        val btnMessage = detailView.findViewById<Button>(R.id.btnMessage)
+        btnMessage.setOnClickListener {
+            //poner logica de contactar al conductor
+            val action = SearchResultsFragmentDirections
+                .actionSearchResultsFragmentToChatFragment(
+                    receiverId = tripDetail.driverUser.id,
+                    receiverName = tripDetail.driverUser.username
+                )
+            findNavController().navigate(action)
+        }
+    }
+
+    private fun savePassengerRequest(tripId: String, onResult: (Boolean) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        val currentUserId = getCurrentUserId()
+
+        if (currentUserId.isNullOrEmpty()) {
+            onResult(false)
+            return
+        }
+
+        // Verificar si ya existe una solicitud para este viaje y usuario
+        db.collection("PassengerRequests")
+            .whereEqualTo("idTrip", tripId)
+            .whereEqualTo("idUser", currentUserId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.isEmpty) {
+                    // No existe, crear nueva solicitud
+                    val request = PassengerRequest(
+                        idTrip = tripId,
+                        idUser = currentUserId,
+                        status = RequestStatus.PENDING,
+                        attemptCount = 1,
+                        createdAt = System.currentTimeMillis()
+                    )
+
+                    db.collection("PassengerRequests")
+                        .add(request)
+                        .addOnSuccessListener { docRef ->
+                            // Actualizar el documento con su propio ID
+                            docRef.update("id", docRef.id)
+                                .addOnSuccessListener {
+                                    obtenerTokenDelConductor(tripId) { token ->
+                                        obtenerNombreDelUsuario(currentUserId) { nombre ->
+                                            if (token != null && nombre != null) {
+                                                NotificationSender.enviar(token, "solicitud_cupo", nombre) { success ->
+                                                    Log.d("Notificación", if (success) "Enviada" else "Falló")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                .addOnFailureListener { onResult(false) }
+                        }
+                        .addOnFailureListener { onResult(false) }
+                } else {
+                    // Verificar si puede volver a solicitar
+                    val existingRequest = snapshot.documents.first()
+                    val attempts = existingRequest.getLong("requestAttempts")?.toInt() ?: 1
+                    val status = existingRequest.getString("status")
+
+                    when (status) {
+                        RequestStatus.PENDING.name -> {
+                            Toast.makeText(requireContext(), "Ya tienes una solicitud pendiente para este viaje", Toast.LENGTH_SHORT).show()
+                            onResult(false)
+                        }
+                        RequestStatus.ACCEPTED.name -> {
+                            Toast.makeText(requireContext(), "Ya fuiste aceptado en este viaje", Toast.LENGTH_SHORT).show()
+                            onResult(false)
+                        }
+                        RequestStatus.REJECTED.name -> {
+                            if (attempts >= 3) {
+                                Toast.makeText(requireContext(), "Has alcanzado el máximo de intentos para este viaje", Toast.LENGTH_LONG).show()
+                                onResult(false)
+                            } else {
+                                // Permitir nueva solicitud
+                                existingRequest.reference.update(
+                                    mapOf(
+                                        "status" to RequestStatus.PENDING.name,
+                                        "requestAttempts" to attempts + 1,
+                                        "createdAt" to System.currentTimeMillis()
+                                    )
+                                ).addOnSuccessListener { onResult(true) }
+                                    .addOnFailureListener { onResult(false) }
+                            }
+                        }
+                        else -> onResult(false)
+                    }
+                }
+            }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    private fun getCurrentUserId(): String? {
+        return FirebaseAuth.getInstance().currentUser?.uid
+    }
+    private fun obtenerTokenDelConductor(tripId: String, callback: (String?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("Trips").document(tripId).get()
+            .addOnSuccessListener { tripSnap ->
+                val idDriver = tripSnap.getString("idDriver")
+                if (idDriver.isNullOrEmpty()) {
+                    callback(null)
+                    return@addOnSuccessListener
+                }
+
+                db.collection("users").document(idDriver).get()
+                    .addOnSuccessListener { userSnap ->
+                        val token = userSnap.getString("token") // O el nombre exacto del campo en tu base
+                        callback(token)
+                    }
+                    .addOnFailureListener { callback(null) }
+            }
+            .addOnFailureListener { callback(null) }
+    }
+    //para enviar la notificación
+    private fun obtenerNombreDelUsuario(uid: String, callback: (String?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { snapshot ->
+                val nombre = snapshot.getString("username") // o "name", depende de tu estructura
+                callback(nombre)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+    }
+
+
 }

@@ -3,10 +3,13 @@ package com.example.uniride.ui.driver.publish
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -26,7 +29,18 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentPublishRouteBinding
-import com.example.uniride.domain.model.Vehicle
+import com.example.uniride.domain.model.Car
+import com.example.uniride.domain.model.Route
+import com.example.uniride.domain.model.Stop
+import com.example.uniride.domain.model.StopInRoute
+import com.example.uniride.domain.model.Trip
+import com.example.uniride.domain.model.TripStatus
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 class PublishRouteFragment : Fragment() {
@@ -34,9 +48,19 @@ class PublishRouteFragment : Fragment() {
     private var _binding: FragmentPublishRouteBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var vehicleList: List<Vehicle>
+    //private lateinit var vehicleList: List<Vehicle>
     private val stopsList = mutableListOf<String>()
     private lateinit var sharedPreferences: SharedPreferences
+
+    // Variables para fecha y hora
+    private var selectedDate: Calendar = Calendar.getInstance()
+    private var selectedTime: Calendar = Calendar.getInstance()
+    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    // Variables para edición
+    private var isEditing = false
+    private var editingTripId: String? = null
 
     // Enum para saber qué campo de texto está activo para el reconocimiento de voz
     private enum class EditTextField {
@@ -58,6 +82,19 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
+    //Firebase
+    private val db = FirebaseFirestore.getInstance()
+    private val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+    //lista de carros del usuario
+    private lateinit var vehicleList: List<Car>
+    //carro seleccionado
+    private var selectedCar: Car? = null
+
+
+
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -72,12 +109,445 @@ class PublishRouteFragment : Fragment() {
         sharedPreferences = requireActivity().getSharedPreferences("route_data", Context.MODE_PRIVATE)
 
         setupVehicleSpinner()
+        //si se acaba de agregar un vehículo lo preselecciona
+        parentFragmentManager.setFragmentResultListener("vehicle_added", viewLifecycleOwner) { _, bundle ->
+            val newVehicleId = bundle.getString("newVehicleId")
+            if (newVehicleId != null) {
+                setupVehicleSpinner(preselectVehicleId = newVehicleId)
+            } else {
+                //si no hay vehículo recién cargado
+                setupVehicleSpinner()
+            }
+        }
+
+        checkEditMode()
+        setupDateTimePickers()
         setupContinueButton()
         setupVoiceRecognition()
 
         initStopFields()
         binding.btnAddStop.setOnClickListener {
             addNewStopField()
+        }
+    }
+
+    private fun setupDateTimePickers() {
+        // Configurar valores iniciales
+        updateDateTimeDisplay()
+
+        // Configurar selector de fecha
+        binding.inputDate.setOnClickListener {
+            showDatePicker()
+        }
+
+        // Configurar selector de hora
+        binding.inputTime.setOnClickListener {
+            showTimePicker()
+        }
+
+        // Hacer que los campos no sean editables directamente
+        binding.inputDate.isFocusable = false
+        binding.inputDate.isClickable = true
+        binding.inputTime.isFocusable = false
+        binding.inputTime.isClickable = true
+    }
+
+    private fun showDatePicker() {
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                selectedDate.set(Calendar.YEAR, year)
+                selectedDate.set(Calendar.MONTH, month)
+                selectedDate.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                updateDateDisplay()
+            },
+            selectedDate.get(Calendar.YEAR),
+            selectedDate.get(Calendar.MONTH),
+            selectedDate.get(Calendar.DAY_OF_MONTH)
+        )
+
+        // No permitir fechas pasadas
+        datePickerDialog.datePicker.minDate = System.currentTimeMillis()
+        datePickerDialog.show()
+    }
+
+    private fun showTimePicker() {
+        val timePickerDialog = TimePickerDialog(
+            requireContext(),
+            { _, hourOfDay, minute ->
+                selectedTime.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                selectedTime.set(Calendar.MINUTE, minute)
+                updateTimeDisplay()
+            },
+            selectedTime.get(Calendar.HOUR_OF_DAY),
+            selectedTime.get(Calendar.MINUTE),
+            true // Formato 24 horas
+        )
+        timePickerDialog.show()
+    }
+
+    private fun updateDateTimeDisplay() {
+        updateDateDisplay()
+        updateTimeDisplay()
+    }
+
+    private fun updateDateDisplay() {
+        binding.inputDate.setText(dateFormat.format(selectedDate.time))
+    }
+
+    private fun updateTimeDisplay() {
+        binding.inputTime.setText(timeFormat.format(selectedTime.time))
+    }
+
+    private fun checkEditMode() {
+        val intent = requireActivity().intent
+        isEditing = intent.getBooleanExtra("IS_EDITING", false)
+        editingTripId = intent.getStringExtra("TRIP_ID")
+
+        if (isEditing && !editingTripId.isNullOrEmpty()) {
+            loadTripDataFromFirebase()
+            binding.btnContinue.text = "Actualizar viaje"
+        }
+    }
+
+    private fun loadTripDataFromFirebase() {
+        editingTripId?.let { tripId ->
+            db.collection("Trips").document(tripId)
+                .get()
+                .addOnSuccessListener { tripDoc ->
+                    if (tripDoc.exists()) {
+                        val trip = tripDoc.toObject(Trip::class.java)
+                        trip?.let { loadTripDetails(it) }
+                    } else {
+                        Toast.makeText(requireContext(), "Viaje no encontrado", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .addOnFailureListener {
+                    Toast.makeText(requireContext(), "Error al cargar datos del viaje", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
+    private fun loadTripDetails(trip: Trip) {
+        // Cargar datos básicos del viaje
+        binding.inputPrice.setText(trip.price.toString())
+        binding.inputSeats.setText(trip.places.toString())
+        binding.inputDescription.setText(trip.description)
+
+        // Cargar fecha y hora
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+            selectedDate.time = dateFormat.parse(trip.date) ?: Calendar.getInstance().time
+            selectedTime.time = timeFormat.parse(trip.startTime) ?: Calendar.getInstance().time
+
+            updateDateTimeDisplay()
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Error al cargar fecha/hora", Toast.LENGTH_SHORT).show()
+        }
+
+        // Cargar vehículo seleccionado
+        loadVehicleSelection(trip.idCar)
+
+        // Cargar ruta (origen, destino y paradas)
+        loadRouteData(trip.idRoute)
+    }
+
+    private fun loadVehicleSelection(carId: String) {
+        // Esperar a que se carguen los vehículos y luego seleccionar
+        loadVehiclesFromFirestore { vehicles ->
+            vehicleList = vehicles
+            setupVehicleSpinnerWithSelection(carId)
+        }
+    }
+
+    private fun setupVehicleSpinnerWithSelection(preselectCarId: String? = null) {
+        val vehicleNames = mutableListOf("Seleccionar un vehículo")
+        if (vehicleList.isNotEmpty()) {
+            vehicleNames.addAll(vehicleList.map { "${it.brand} ${it.model} (${it.licensePlate})" })
+        }
+        vehicleNames.add("Agregar vehículo")
+
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerCar.adapter = adapter
+
+        // Preseleccionar por ID del carro
+        if (!preselectCarId.isNullOrEmpty()) {
+            val index = vehicleList.indexOfFirst { it.id == preselectCarId }
+            if (index != -1) {
+                binding.spinnerCar.setSelection(index + 1)
+                selectedCar = vehicleList[index]
+            }
+        }
+
+        binding.spinnerCar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selected = parent.getItemAtPosition(position).toString()
+                when (selected) {
+                    "Agregar vehículo" -> findNavController()
+                        .navigate(R.id.action_publishRouteFragment_to_addVehicleFragment)
+                    "Seleccionar un vehículo" -> selectedCar = null
+                    else -> {
+                        selectedCar = if (position > 0 && position <= vehicleList.size) {
+                            vehicleList[position - 1]
+                        } else null
+                    }
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
+    private fun loadRouteData(routeId: String) {
+        // Primero obtener la ruta
+        db.collection("Routes").document(routeId)
+            .get()
+            .addOnSuccessListener { routeDoc ->
+                if (routeDoc.exists()) {
+                    val route = routeDoc.toObject(Route::class.java)
+                    route?.let {
+                        // Cargar paradas ordenadas por posición
+                        db.collection("StopsInRoute")
+                            .whereEqualTo("idRoute", route.id)
+                            .orderBy("position")
+                            .get()
+                            .addOnSuccessListener { stopsInRoute ->
+                                val stopIds = stopsInRoute.documents.mapNotNull { doc ->
+                                    doc.toObject(StopInRoute::class.java)?.idStop
+                                }
+
+                                // Verificar que tenemos paradas
+                                if (stopIds.isNotEmpty()) {
+                                    loadStopNames(stopIds)
+                                } else {
+                                    Toast.makeText(requireContext(), "No se encontraron paradas para esta ruta", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(requireContext(), "Error al cargar paradas de la ruta", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Ruta no encontrada", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar ruta", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun loadIntermediateStopsInUI(intermediateStops: List<String>) {
+        // Limpiar paradas existentes
+        binding.stopsContainer.removeAllViews()
+
+        // Si hay paradas intermedias, crearlas
+        if (intermediateStops.isNotEmpty()) {
+            intermediateStops.forEach { stopName ->
+                addNewStopField()
+                val lastStopView = binding.stopsContainer.getChildAt(binding.stopsContainer.childCount - 1)
+                val stopEditText = lastStopView.findViewById<EditText>(R.id.et_stop)
+                stopEditText.setText(stopName)
+            }
+        }
+
+        // Siempre agregar al menos un campo vacío para nuevas paradas
+        addNewStopField()
+    }
+
+    private fun loadStopNames(stopIds: List<String>) {
+        if (stopIds.isEmpty()) return
+
+        val tasks = stopIds.map { stopId ->
+            db.collection("Stops").document(stopId).get()
+        }
+
+        Tasks.whenAllComplete(tasks)
+            .addOnSuccessListener { results ->
+                val stops = results.mapIndexedNotNull { index, task ->
+                    if (task.isSuccessful) {
+                        val stopDoc = task.result as? com.google.firebase.firestore.DocumentSnapshot
+                        stopDoc?.toObject(Stop::class.java)?.let { stop ->
+                            stop.copy(id = stopDoc.id)
+                        }
+                    } else null
+                }
+
+                // Asegurar que tenemos al menos origen y destino
+                if (stops.size >= 2) {
+                    // El primer elemento es origen, el último es destino
+                    val origin = stops.first()
+                    val destination = stops.last()
+
+                    // Poblar los campos de origen y destino
+                    binding.inputOrigin.setText(origin.name)
+                    binding.inputDestination.setText(destination.name)
+
+                    // Las paradas intermedias (si las hay)
+                    val intermediateStops = stops.drop(1).dropLast(1)
+                    loadIntermediateStopsInUI(intermediateStops.map { it.name })
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar nombres de paradas", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun updateTripInFirebase(origin: String, destination: String, stops: List<String>) {
+        editingTripId?.let { tripId ->
+
+            // Primero crear/obtener las paradas
+            getOrCreateStopByName(origin) { originStop ->
+                if (originStop == null) return@getOrCreateStopByName
+
+                getOrCreateStopByName(destination) { destinationStop ->
+                    if (destinationStop == null) return@getOrCreateStopByName
+
+                    getOrCreateIntermediateStops(stops) { intermediateStops ->
+
+                        // Obtener el viaje actual para obtener su routeId
+                        db.collection("Trips").document(tripId)
+                            .get()
+                            .addOnSuccessListener { tripDoc ->
+                                val currentTrip = tripDoc.toObject(Trip::class.java)
+                                if (currentTrip != null) {
+                                    updateRouteAndTrip(currentTrip, originStop, destinationStop, intermediateStops)
+                                }
+                            }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateRouteAndTrip(
+        currentTrip: Trip,
+        originStop: Stop,
+        destinationStop: Stop,
+        intermediateStops: List<Stop>
+    ) {
+        val routeId = currentTrip.idRoute
+
+        // Actualizar la ruta
+        val routeUpdates = mapOf(
+            "idOrigin" to (originStop.id ?: ""),
+            "idDestination" to (destinationStop.id ?: "")
+        )
+
+        db.collection("Routes").document(routeId)
+            .update(routeUpdates)
+            .addOnSuccessListener {
+                // Eliminar paradas antiguas de la ruta
+                db.collection("StopsInRoute")
+                    .whereEqualTo("idRoute", routeId)
+                    .get()
+                    .addOnSuccessListener { oldStops ->
+                        // Eliminar paradas antiguas
+                        val deleteTasks = oldStops.documents.map { it.reference.delete() }
+
+                        Tasks.whenAllComplete(deleteTasks)
+                            .addOnSuccessListener {
+                                // Agregar nuevas paradas
+                                addNewStopsToRoute(routeId, originStop, destinationStop, intermediateStops) {
+                                    updateTripDetails(currentTrip.id.toString())
+                                }
+                            }
+                    }
+            }
+    }
+
+    private fun addNewStopsToRoute(
+        routeId: String,
+        originStop: Stop,
+        destinationStop: Stop,
+        intermediateStops: List<Stop>,
+        onComplete: () -> Unit
+    ) {
+        val allStopsOrdered = listOf(originStop) + intermediateStops + listOf(destinationStop)
+        val stopsInRouteRef = db.collection("StopsInRoute")
+
+        val tasks = allStopsOrdered.mapIndexed { index, stop ->
+            val stopInRoute = StopInRoute(
+                idRoute = routeId,
+                idStop = stop.id ?: "",
+                position = index
+            )
+            stopsInRouteRef.add(stopInRoute)
+        }
+
+        Tasks.whenAllComplete(tasks)
+            .addOnSuccessListener {
+                onComplete()
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al actualizar paradas", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun updateTripDetails(tripId: String) {
+        val price = binding.inputPrice.text.toString().toDoubleOrNull() ?: 0.0
+        val places = binding.inputSeats.text.toString().toIntOrNull() ?: 1
+
+        val tripUpdates = mapOf(
+            "idCar" to (selectedCar?.id ?: ""),
+            "description" to binding.inputDescription.text.toString().trim(),
+            "price" to price,
+            "places" to places,
+            "date" to SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selectedDate.time),
+            "startTime" to SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedTime.time),
+            "updatedAt" to Date()
+        )
+
+        db.collection("Trips").document(tripId)
+            .update(tripUpdates)
+            .addOnSuccessListener {
+                showTripUpdateSuccessDialog()
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al actualizar el viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun showTripUpdateSuccessDialog() {
+        val activity = requireActivity()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+
+        dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje actualizado!"
+        dialogView.findViewById<TextView>(R.id.tv_secondary).text = "Los cambios se han guardado exitosamente"
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setDimAmount(0.75f)
+        dialog.show()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            dialog.dismiss()
+            activity.setResult(Activity.RESULT_OK)
+            activity.finish()
+        }, 1500)
+    }
+
+    private fun createNewTrip(origin: String, destination: String, stops: List<String>) {
+        getOrCreateStopByName(origin) { originStop ->
+            if (originStop == null) return@getOrCreateStopByName
+
+            getOrCreateStopByName(destination) { destinationStop ->
+                if (destinationStop == null) return@getOrCreateStopByName
+
+                getOrCreateIntermediateStops(stops) { intermediateStops ->
+                    createRouteWithStops(originStop, destinationStop, intermediateStops,
+                        onSuccess = { routeId ->
+                            createTrip(routeId)
+                        },
+                        onError = {
+                            Toast.makeText(requireContext(), "No se pudo crear la ruta", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            }
         }
     }
 
@@ -137,44 +607,71 @@ class PublishRouteFragment : Fragment() {
     }
 
     //elegir uno de los vehículos registrados del conductor
-    private fun setupVehicleSpinner() {
-        vehicleList = loadVehiclesForUser() // Simulación o llamada real a DB
+    private fun setupVehicleSpinner(preselectVehicleId: String? = null) {
 
-        val vehicleNames = if (vehicleList.isEmpty()) {
-            listOf("Agregar vehículo")
-        } else {
-            vehicleList.map { "${it.brand} ${it.model} (${it.licensePlate})" } + "Agregar vehículo"
-        }
+        loadVehiclesFromFirestore { vehicles ->
+            vehicleList = vehicles
 
-        val adapter =
-            ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerCar.adapter = adapter
+            // Crear lista con opción inicial "Agregar vehículo"
+            val vehicleNames = mutableListOf("Seleccionar un vehículo")
+            if (vehicles.isNotEmpty()) {
+                //datos que se agregan para cada carro
+                vehicleNames.addAll(vehicles.map { "${it.brand} ${it.model} (${it.licensePlate})" })
+            }
+            vehicleNames.add("Agregar vehículo")
 
-        binding.spinnerCar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                val selected = parent.getItemAtPosition(position).toString()
-                if (selected == "Agregar vehículo") {
-                    findNavController().navigate(R.id.action_publishRouteFragment_to_addVehicleFragment)
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, vehicleNames)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            binding.spinnerCar.adapter = adapter
+
+            // Si se pasó un id de vehículo se selecciona de una vez
+            if (preselectVehicleId != null) {
+                val index = vehicles.indexOfFirst { it.id == preselectVehicleId }
+                if (index != -1) {
+                    // +1 por la opción "Seleccionar un vehículo" en la posición 0
+                    binding.spinnerCar.setSelection(index + 1)
                 }
             }
 
-            override fun onNothingSelected(parent: AdapterView<*>) {}
+            //  al seleccionar una opción del spinner
+            binding.spinnerCar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                    val selected = parent.getItemAtPosition(position).toString()
+
+                    when (selected) {
+                        "Agregar vehículo" -> findNavController()
+                            .navigate(R.id.action_publishRouteFragment_to_addVehicleFragment)
+                        "Seleccionar un vehículo" -> {
+                            // No se hace nada, simplemente es la opción inicial
+                        }
+                        else -> {
+                            // Vehículo válido seleccionado
+                            selectedCar = if (
+                                binding.spinnerCar.selectedItemPosition > 0 &&
+                                binding.spinnerCar.selectedItemPosition <= vehicleList.size
+                            ) {
+                                vehicleList[binding.spinnerCar.selectedItemPosition - 1]
+                            } else null
+                        }
+                    }
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>) {}
+            }
         }
     }
 
+
+
     private fun setupContinueButton() {
         binding.btnContinue.setOnClickListener {
-            val originAddress = binding.inputOrigin.text.toString()
-            val destinationAddress = binding.inputDestination.text.toString()
+            if (!validateTripInputs()) return@setOnClickListener
 
+            val originAddress = binding.inputOrigin.text.toString().trim()
+            val destinationAddress = binding.inputDestination.text.toString().trim()
+
+            // Recopilar paradas intermedias
             stopsList.clear()
-
             for (i in 0 until binding.stopsContainer.childCount) {
                 val stopView = binding.stopsContainer.getChildAt(i)
                 val stopEditText = stopView.findViewById<EditText>(R.id.et_stop)
@@ -183,67 +680,40 @@ class PublishRouteFragment : Fragment() {
                     stopsList.add(stopText)
                 }
             }
-            saveRouteData(originAddress, destinationAddress, stopsList)
 
-            val activity = requireActivity()
-
-            val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
-
-            dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje publicado!"
-            dialogView.findViewById<TextView>(R.id.tv_secondary).text =
-                "Tu viaje ha sido creado exitosamente"
-
-            val dialog = AlertDialog.Builder(activity)
-                .setView(dialogView)
-                .create()
-
-            dialog.window?.setDimAmount(0.75f)
-            dialog.window?.attributes?.windowAnimations = R.style.DialogFadeAnimation
-            dialog.show()
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                dialog.dismiss()
-
-                activity.setResult(Activity.RESULT_OK)
-                activity.finish()
-            }, 1500)
+            if (isEditing && !editingTripId.isNullOrEmpty()) {
+                // Actualizar viaje existente en Firebase
+                updateTripInFirebase(originAddress, destinationAddress, stopsList)
+            } else {
+                // Crear nuevo viaje (código existente)
+                createNewTrip(originAddress, destinationAddress, stopsList)
+            }
         }
     }
 
-    private fun saveRouteData(origin: String, destination: String, stops: List<String>) {
-        val editor = sharedPreferences.edit()
+    //carros registrados por el conductor
+    private fun loadVehiclesFromFirestore(onComplete: (List<Car>) -> Unit) {
+        if (uid == null) return
 
-        val tripId = System.currentTimeMillis().toString()
-
-        editor.putString("TRIP_${tripId}_ORIGIN", origin)
-        editor.putString("TRIP_${tripId}_DESTINATION", destination)
-        editor.putInt("TRIP_${tripId}_STOPS_COUNT", stops.size)
-
-        stops.forEachIndexed { index, stop ->
-            editor.putString("TRIP_${tripId}_STOP_$index", stop)
-        }
-
-        val tripIds = sharedPreferences.getStringSet("SAVED_TRIP_IDS", mutableSetOf()) ?: mutableSetOf()
-        tripIds.add(tripId)
-        editor.putStringSet("SAVED_TRIP_IDS", tripIds)
-
-        editor.putBoolean("HAS_PUBLISHED_ROUTE", true)
-        editor.putBoolean("HAS_ACTIVE_ROUTE", false)
-
-        editor.apply()
+        db.collection("Cars")
+            .whereEqualTo("idDriver", uid)
+            .get()
+            .addOnSuccessListener { result ->
+                val vehicles = result.documents.mapNotNull { it.toObject(Car::class.java) }
+                onComplete(vehicles)
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar vehículos", Toast.LENGTH_SHORT).show()
+                onComplete(emptyList())
+            }
     }
 
-    //simulando que tiene carros registrados
-    private fun loadVehiclesForUser(): List<Vehicle> {
-        // Simulado
-        return listOf(
-            Vehicle("Toyota", "Corolla", 2020, "Blanco", "ABC123", listOf()),
-            Vehicle("Mazda", "3", 2022, "Gris", "XYZ987", listOf())
-        )
-    }
 
     private fun initStopFields() {
-        addNewStopField() // primer campo por defecto
+        // Solo agregar un campo si no estamos editando o si no hay paradas cargadas
+        if (!isEditing || binding.stopsContainer.childCount == 0) {
+            addNewStopField()
+        }
     }
 
     private fun addNewStopField() {
@@ -274,8 +744,6 @@ class PublishRouteFragment : Fragment() {
         }
     }
 
-
-
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -283,5 +751,244 @@ class PublishRouteFragment : Fragment() {
 
     companion object {
         private const val VOICE_PERMISSION_REQUEST_CODE = 101
+    }
+
+
+
+
+
+    //validar campos del viaje antes de publicarlo
+    private fun validateTripInputs(): Boolean {
+        val originAddress = binding.inputOrigin.text.toString().trim()
+        val destinationAddress = binding.inputDestination.text.toString().trim()
+        val selectedDateStr = binding.inputDate.text.toString().trim()
+        val selectedTimeStr = binding.inputTime.text.toString().trim()
+
+        if (originAddress.isEmpty() || destinationAddress.isEmpty()) {
+            Toast.makeText(requireContext(), "Por favor completa origen y destino", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        if (selectedCar == null) {
+            Toast.makeText(requireContext(), "Debes seleccionar un vehículo", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        if (selectedDateStr.isEmpty() || selectedTimeStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Por favor selecciona fecha y hora", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        val selectedDateTime = Calendar.getInstance().apply {
+            set(Calendar.YEAR, selectedDate.get(Calendar.YEAR))
+            set(Calendar.MONTH, selectedDate.get(Calendar.MONTH))
+            set(Calendar.DAY_OF_MONTH, selectedDate.get(Calendar.DAY_OF_MONTH))
+            set(Calendar.HOUR_OF_DAY, selectedTime.get(Calendar.HOUR_OF_DAY))
+            set(Calendar.MINUTE, selectedTime.get(Calendar.MINUTE))
+        }
+
+        if (selectedDateTime.timeInMillis < System.currentTimeMillis()) {
+            Toast.makeText(requireContext(), "No puedes programar un viaje en el pasado", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        return true
+    }
+
+    //geodificar y subir a firestore una parada en específico
+    private fun getOrCreateStopByName(name: String, onResult: (Stop?) -> Unit) {
+        val stopsRef = db.collection("Stops")
+
+        stopsRef.whereEqualTo("name", name)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val existingStop = documents.first().toObject(Stop::class.java).copy(
+                        id = documents.first().id
+                    )
+                    onResult(existingStop)
+                } else {
+                    //si la parada no está en la base de datos la crea usando geocoder
+                    val geocoder = Geocoder(requireContext(), Locale.getDefault())
+                    val addresses = try {
+                        geocoder.getFromLocationName(name, 1)
+                    } catch (e: Exception) {
+                        null
+                    }
+
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        val stopData = mapOf(
+                            "name" to name,
+                            "lat" to address.latitude,
+                            "lng" to address.longitude
+                        )
+
+                        stopsRef.add(stopData)
+                            .addOnSuccessListener { docRef ->
+                                val finalStop = Stop(
+                                    id = docRef.id,
+                                    name = name,
+                                    lat = address.latitude,
+                                    lng = address.longitude
+                                )
+                                onResult(finalStop)
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(requireContext(),
+                                    "Error al guardar parada: $name", Toast.LENGTH_SHORT).show()
+                                onResult(null)
+                            }
+                    } else {
+                        Toast.makeText(requireContext(), "No se pudo geolocalizar: $name", Toast.LENGTH_SHORT).show()
+                        onResult(null)
+                    }
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error buscando parada: $name", Toast.LENGTH_SHORT).show()
+                onResult(null)
+            }
+    }
+
+
+    //devuelve la lista de objetos stop en el mismo orden
+    private fun getOrCreateIntermediateStops(stopNames: List<String>,
+                                             onComplete: (List<Stop>) -> Unit) {
+        val resultStops = mutableListOf<Stop>()
+        var processedCount = 0
+
+        if (stopNames.isEmpty()) {
+            onComplete(emptyList())
+            return
+        }
+
+        stopNames.forEach { name ->
+            getOrCreateStopByName(name) { stop ->
+                if (stop != null) {
+                    //se añade la parada resultado a la lista de paradas
+                    resultStops.add(stop)
+                } else {
+                    Toast.makeText(requireContext(),
+                        "Error procesando parada: $name", Toast.LENGTH_SHORT).show()
+                }
+
+                processedCount++
+
+                if (processedCount == stopNames.size) {
+                    // Ordenar resultado según el orden original de stopNames
+                    val orderedStops = stopNames.mapNotNull { n -> resultStops.find { it.name == n } }
+                    onComplete(orderedStops)
+                }
+            }
+        }
+    }
+
+    //crea la ruta y las paradas por ruta
+    private fun createRouteWithStops(
+        origin: Stop,
+        destination: Stop,
+        intermediateStops: List<Stop>,
+        onSuccess: (routeId: String) -> Unit,
+        onError: () -> Unit) {
+        //ubi en la base de datos
+        val routeRef = db.collection("Routes").document()
+
+        val route = Route(
+            id = routeRef.id,
+            idOrigin = origin.id ?: "",
+            idDestination = destination.id ?: ""
+        )
+
+        // guardar la ruta principal
+        routeRef.set(route)
+            .addOnSuccessListener {
+                val stopsInRouteRef = db.collection("StopsInRoute")
+
+                // paradas totales en la ruta
+                val allStopsOrdered = listOf(origin) + intermediateStops + listOf(destination)
+
+                // guardar cada parada intermedia
+                val tasks = allStopsOrdered.mapIndexed { index, stop ->
+                    val stopInRoute = StopInRoute(
+                        idRoute = route.id,
+                        idStop = stop.id ?: "",
+                        position = index
+                    )
+                    stopsInRouteRef.add(stopInRoute)
+                }
+
+                // Esperar a que todas las paradas se guarden
+                Tasks.whenAllComplete(tasks)
+                    .addOnSuccessListener {
+                        onSuccess(route.id)
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(requireContext(),
+                            "Error al guardar paradas en la ruta", Toast.LENGTH_SHORT).show()
+                        onError()
+                    }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al crear la ruta", Toast.LENGTH_SHORT).show()
+                onError()
+            }
+    }
+
+
+
+    //crea el viaje completo
+    private fun createTrip(routeId: String) {
+        val tripRef = db.collection("Trips").document()
+
+        val price = binding.inputPrice.text.toString().toDoubleOrNull() ?: 0.0
+        val places = binding.inputSeats.text.toString().toIntOrNull() ?: 1
+
+        val trip = Trip(
+            id = tripRef.id,
+            idDriver = uid ?: return,
+            idRoute = routeId,
+            idCar = selectedCar?.id ?: "",
+            description = binding.inputDescription.text.toString().trim(),
+            price = price,
+            places = places,
+            date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selectedDate.time),
+            startTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedTime.time),
+            status = TripStatus.PENDING,
+            createdAt = Date()
+        )
+        //guarda el viaje en la base de datos
+        tripRef.set(trip)
+            .addOnSuccessListener {
+                showTripSuccessDialog()
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al publicar el viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+    //mensaje de exito al publicar un viaje
+    private fun showTripSuccessDialog() {
+        val activity = requireActivity()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
+
+        dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje publicado!"
+        dialogView.findViewById<TextView>(R.id.tv_secondary).text = "Tu viaje ha sido creado exitosamente"
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setDimAmount(0.75f)
+        dialog.window?.attributes?.windowAnimations = R.style.DialogFadeAnimation
+        dialog.show()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            dialog.dismiss()
+            activity.setResult(Activity.RESULT_OK)
+            activity.finish()
+        }, 1500)
     }
 }

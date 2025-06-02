@@ -5,11 +5,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.example.uniride.databinding.BottomSheetPassengerDetailBinding
-import com.example.uniride.domain.model.PassengerRequest
+import com.example.uniride.domain.model.PassengerRequestOLD
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 class PassengerRequestDetailBottomSheet(
-    private val details: PassengerRequest,
+    private val details: PassengerRequestOLD,
     private val onOpenChat: () -> Unit
 ) : BottomSheetDialogFragment() {
 

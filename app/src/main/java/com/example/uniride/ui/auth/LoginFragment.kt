@@ -1,7 +1,6 @@
 package com.example.uniride.ui.auth
 
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,26 +8,21 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
-import com.example.uniride.connection.SupabaseInstance
 import com.example.uniride.databinding.FragmentLoginBinding
 import com.example.uniride.ui.MainActivity
-import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.auth.providers.builtin.Email
-import kotlinx.coroutines.launch
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 
 
 class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
-    private lateinit var securePrefs: SharedPreferences
-    private lateinit var masterKey: MasterKey
+
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -40,32 +34,22 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        //Se inicializa EncryptedSharedPreferences
-        context?.let {
-            masterKey = MasterKey.Builder(it)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
 
-            securePrefs = EncryptedSharedPreferences.create(
-                it,
-                "secure_user_prefs",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        }
+        auth = FirebaseAuth.getInstance()
 
-        //Va a al fragmento de registrar usuario
+        // fragmento de registro
         binding.registerButton.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
         }
 
+
         binding.ingresarButton.setOnClickListener {
+            //verificación de datos completos
             val email = binding.email.text.toString()
             val password = binding.password.text.toString()
 
-            //validar si los campos obligatorios ya se completaron
             var valid = true
+
             if (email.isEmpty()) {
                 binding.email.error = "El correo es obligatorio"
                 valid = false
@@ -82,42 +66,55 @@ class LoginFragment : Fragment() {
 
             if (!valid) return@setOnClickListener
 
-            lifecycleScope.launch {
-                loginUser(email, password)
-            }
+            loginUser(email, password)
         }
 
+        // Recuperar contraseña
         binding.olvidoText.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_recoverPasswordFragment)
         }
     }
+
+    private fun loginUser(email: String, password: String) {
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    // Obtener userId actual
+                    val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
+
+                    // Obtener token FCM
+                    FirebaseMessaging.getInstance().token.addOnCompleteListener { tokenTask ->
+                        if (tokenTask.isSuccessful) {
+                            val token = tokenTask.result
+
+                            // Guardar token en Firestore
+                            val db = FirebaseFirestore.getInstance()
+                            val userRef = db.collection("users").document(userId)
+                            userRef.update("token", token)
+                                .addOnSuccessListener {
+                                    // Token guardado exitosamente (opcional log)
+                                    Log.d("Login", "Token FCM guardado")
+                                }
+                                .addOnFailureListener {
+                                    // Si no existe el documento, lo creamos
+                                    val data = hashMapOf("token" to token)
+                                    userRef.set(data)
+                                }
+                        }
+                    }
+
+                    // Ir a MainActivity
+                    startActivity(Intent(requireContext(), MainActivity::class.java))
+                    requireActivity().finish()
+                } else {
+                    Log.e("Login", "Error: ${task.exception?.localizedMessage}")
+                    Toast.makeText(requireContext(), "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-    //Una función de tipo suspend es una función que puede ser pausada y
-    //reanudada sin bloquear el hilo en el que se ejecuta. Permitiendo
-    //escrbir código asíncrono, cosa necesaria para utilizar supabase
-
-    private suspend fun loginUser(email: String, password: String) {
-        try {
-            SupabaseInstance.client.auth.signInWith(Email) {
-                this.email = email
-                this.password = password
-            }
-
-            securePrefs.edit()
-                .putString("user_email", email)
-                .putString("user_password", password)
-                .apply()
-
-            Log.i("Login", "Se inició sesión correctamente")
-            startActivity(Intent(requireContext(), MainActivity::class.java))
-            requireActivity().finish()
-
-        } catch (e: Exception) {
-            Log.e("Login", "Error al iniciar sesión: ${e.localizedMessage}")
-            Toast.makeText(requireContext(), "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
-        }
     }
 }
