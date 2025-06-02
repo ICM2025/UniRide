@@ -71,6 +71,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 val destination = when (type) {
                     "aceptado", "rechazado" -> R.id.passengerRequestsFragment
                     "solicitud_cupo" -> R.id.tripRequestsFragment
+                    "viaje_iniciado" -> R.id.passengerHomeFragment
+                    "viaje_terminado" -> R.id.passengerHomeFragment
+                    "viaje_cancelado" -> R.id.passengerHomeFragment
                     else -> R.id.passengerHomeFragment
                 }
                 putExtra("destinationFromNotification", destination)

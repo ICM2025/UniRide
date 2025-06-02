@@ -29,7 +29,18 @@ exports.sendCustomNotification = functions.https.onRequest(async (req, res) => {
       title = `${fromName} te envió un mensaje`;
       body = req.body.preview?.substring(0, 100) || "Nuevo mensaje";
       break;
-      
+    case "viaje_iniciado":
+      title = "¡Tu viaje ha comenzado!";
+      body = `${fromName} ha iniciado el viaje.`;
+      break;
+    case "viaje_terminado":
+      title = "¡Tu viaje ha finalizado!";
+      body = `${fromName} ha finalizado el viaje. ¡Gracias por viajar con UniRide!`;
+      break;
+    case "viaje_cancelado":
+      title = "¡Tu viaje ha sido cancelado!";
+      body = `${fromName} canceló el viaje que tenias asignado`;
+      break;
     default:
       title = "Notificación";
       body = `Tienes una nueva notificación de ${fromName}`;
