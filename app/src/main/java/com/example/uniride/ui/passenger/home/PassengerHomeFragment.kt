@@ -54,7 +54,8 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     private val locationPermissionCode = 1001
     private var hasLocationPermission = false
     private var currentLocation: Location? = null
-    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var gpsPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
     private var lastDriverLocationUpdate: LatLng? = null
     private val DRIVER_UPDATE_DISTANCE = 100f
 
@@ -143,7 +144,7 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     private fun setupPermissionLauncher() {
-        requestPermissionLauncher = registerForActivityResult(
+        gpsPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
             if (isGranted) {
@@ -157,8 +158,22 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                     Toast.LENGTH_LONG
                 ).show()
             }
+
+            // Después de GPS, pedimos notificaciones
+            checkNotificationPermission()
+        }
+
+        notificationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                Toast.makeText(requireContext(), "Permiso de notificaciones concedido", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "Permiso de notificaciones denegado", Toast.LENGTH_SHORT).show()
+            }
         }
     }
+
 
     private fun checkLocationPermission() {
         if (ContextCompat.checkSelfPermission(
@@ -168,10 +183,29 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         ) {
             hasLocationPermission = true
             startLocationUpdates()
+            checkNotificationPermission()
         } else {
-            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            gpsPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
+    private fun checkNotificationPermission() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                Toast.makeText(
+                    requireContext(),
+                    "El permiso de notificaciones es necesario para avisarte sobre solicitudes y viajes.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+
 
     private fun startLocationUpdates() {
         if (hasLocationPermission) {

@@ -148,7 +148,7 @@ class MainActivity : AppCompatActivity() {
             viewModel.isPassengerMode.collectLatest { isPassengerMode ->
                 setupNavigation(isPassengerMode)
 
-                if (typeFromNotification == "aceptado" || typeFromNotification == "rechazado" || destinationFromNotification != -1) {
+                if (typeFromNotification == "aceptado" || typeFromNotification == "rechazado" || destinationFromNotification == R.id.passengerRequestsFragment) {
                     navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
                         override fun onDestinationChanged(
                             controller: NavController,
@@ -158,6 +158,23 @@ class MainActivity : AppCompatActivity() {
                             controller.removeOnDestinationChangedListener(this)
                             try {
                                 controller.navigate(R.id.passengerRequestsFragment)
+                                intent.removeExtra("destinationFromNotification")
+                                Log.d("MainActivity", "Navegando a destino desde notificación: $destinationFromNotification")
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error al navegar desde notificación", e)
+                            }
+                        }
+                    })
+                }else if(typeFromNotification == "viaje_iniciado" || typeFromNotification == "viaje_terminado" || typeFromNotification == "viaje_cancelado" ||destinationFromNotification == R.id.passengerHomeFragment ){
+                    navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
+                        override fun onDestinationChanged(
+                            controller: NavController,
+                            destination: androidx.navigation.NavDestination,
+                            arguments: Bundle?
+                        ) {
+                            controller.removeOnDestinationChangedListener(this)
+                            try {
+                                controller.navigate(R.id.passengerHomeFragment)
                                 intent.removeExtra("destinationFromNotification")
                                 Log.d("MainActivity", "Navegando a destino desde notificación: $destinationFromNotification")
                             } catch (e: Exception) {

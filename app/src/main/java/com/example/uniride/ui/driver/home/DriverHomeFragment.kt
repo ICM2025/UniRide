@@ -33,6 +33,7 @@ import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverHomeBinding
 import com.example.uniride.domain.model.Trip
 import com.example.uniride.domain.model.TripStatus
+import com.example.uniride.messaging.NotificationSender
 import com.example.uniride.ui.MainActivity
 import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -111,6 +112,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         )
         applicationInfo.metaData.getString("com.google.android.geo.API_KEY") ?: ""
     }
+    private val db2 = FirebaseFirestore.getInstance()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -1174,6 +1176,11 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 if (!documents.isEmpty) {
                     val tripDoc = documents.documents[0]
                     updateTripStatusToTerminated(tripDoc.id, db, loadingDialog)
+                    obtenerNombreDelUsuario { nombre ->
+                        if (nombre != null) {
+                            notifyTripEndedToPassengers(tripDoc.id, nombre)
+                        }
+                    }
                 } else {
                     loadingDialog.dismiss()
                     Toast.makeText(requireContext(), "No se encontró un viaje activo", Toast.LENGTH_SHORT).show()
@@ -1269,5 +1276,52 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         locationManager.removeUpdates(this)
         sensorManager.unregisterListener(sensorEventListener)
         _binding = null
+    }
+    private fun notifyTripEndedToPassengers(tripId: String, driverName: String) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("PassengerRequests")
+            .whereEqualTo("idTrip", tripId)
+            .whereEqualTo("status", "ACCEPTED")
+            .get()
+            .addOnSuccessListener { requests ->
+                for (request in requests) {
+                    val userId = request.getString("idUser") ?: continue
+
+                    db.collection("users").document(userId).get()
+                        .addOnSuccessListener { userDoc ->
+                            val token = userDoc.getString("token")
+
+                            if (!token.isNullOrEmpty()) {
+                                com.example.uniride.messaging.NotificationSender.enviar(
+                                    tokenDestino = token,
+                                    tipo = "viaje_terminado",
+                                    fromName = driverName,
+                                    onResult = { success ->
+                                        Log.d("NOTIF", "Notificación fin de viaje a $userId: ${if (success) "enviada" else "fallida"}")
+                                    }
+                                )
+                            } else {
+                                Log.w("NOTIF", "Usuario $userId no tiene token registrado")
+                            }
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("NOTIF", "Error obteniendo pasajeros del viaje para notificar fin", e)
+            }
+    }
+
+    //para la notificación
+    private fun obtenerNombreDelUsuario(callback: (String?) -> Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return callback(null)
+        db2.collection("users").document(userId).get()
+            .addOnSuccessListener { snapshot ->
+                val nombre = snapshot.getString("username")
+                callback(nombre)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
     }
 }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -33,6 +34,7 @@ class DriverTripDetailBottomSheet(
     private val trip: DriverTripItem,
     private val onTripUpdated: (() -> Unit)? = null
 ) : BottomSheetDialogFragment() {
+    private val db2 = FirebaseFirestore.getInstance()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -259,6 +261,11 @@ class DriverTripDetailBottomSheet(
                 val editor = sharedPreferences.edit()
                 editor.putString("ACTIVE_TRIP_ID", trip.tripId)
                 editor.apply()
+                obtenerNombreDelUsuario { name ->
+                    if (name != null) {
+                        notifyAcceptedPassengers(trip.tripId, name)
+                    }
+                }
 
                 showSuccessDialog()
             }
@@ -375,10 +382,17 @@ class DriverTripDetailBottomSheet(
                 val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
                 val activeTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
 
+
                 if (activeTripId == trip.tripId) {
                     val editor = sharedPreferences.edit()
                     editor.remove("ACTIVE_TRIP_ID")
                     editor.apply()
+                }
+                //notificación de viaje cancelado
+                obtenerNombreDelUsuario { name ->
+                    if (name != null) {
+                        notifyTripCancelledToPassengers(trip.tripId, name)
+                    }
                 }
 
                 Toast.makeText(requireContext(), "Viaje cancelado exitosamente", Toast.LENGTH_SHORT).show()
@@ -394,4 +408,90 @@ class DriverTripDetailBottomSheet(
         // Ejemplo con Firebase Auth:
         return FirebaseAuth.getInstance().currentUser?.uid ?: ""
     }
+    private fun notifyAcceptedPassengers(tripId: String, driverName: String) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("PassengerRequests")
+            .whereEqualTo("idTrip", tripId)
+            .whereEqualTo("status", "ACCEPTED")
+            .get()
+            .addOnSuccessListener { requests ->
+                for (request in requests) {
+                    val userId = request.getString("idUser") ?: continue
+
+                    db.collection("users").document(userId).get()
+                        .addOnSuccessListener { userDoc ->
+                            val token = userDoc.getString("token")
+
+                            if (!token.isNullOrEmpty()) {
+                                Log.d("TOKEN", token)
+                                com.example.uniride.messaging.NotificationSender.enviar(
+                                    tokenDestino = token,
+                                    tipo = "viaje_iniciado",
+                                    fromName = driverName,
+                                    onResult = { success ->
+                                        Log.d("NOTIF", "Notificación a $userId: ${if (success) "enviada" else "fallida"}")
+                                    }
+                                )
+                            } else {
+                                Log.w("NOTIF", "Usuario $userId no tiene token registrado")
+                            }
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("NOTIF", "Error obteniendo pasajeros del viaje", e)
+            }
+    }
+    private fun notifyTripCancelledToPassengers(tripId: String, driverName: String) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("PassengerRequests")
+            .whereEqualTo("idTrip", tripId)
+            .whereEqualTo("status", "ACCEPTED")
+            .get()
+            .addOnSuccessListener { requests ->
+                for (request in requests) {
+                    val userId = request.getString("idUser") ?: continue
+
+                    db.collection("users").document(userId).get()
+                        .addOnSuccessListener { userDoc ->
+                            val token = userDoc.getString("token")
+
+                            if (!token.isNullOrEmpty()) {
+                                com.example.uniride.messaging.NotificationSender.enviar(
+                                    tokenDestino = token,
+                                    tipo = "viaje_cancelado",
+                                    fromName = driverName,
+                                    onResult = { success ->
+                                        Log.d("NOTIF", "Notificación viaje cancelado a $userId: ${if (success) "enviada" else "fallida"}, nombredriver: $driverName")
+                                    }
+                                )
+                            } else {
+                                Log.w("NOTIF", "Usuario $userId no tiene token registrado")
+                            }
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("NOTIF", "Error obteniendo pasajeros del viaje para notificar fin", e)
+            }
+    }
+
+    //para la notificación
+    private fun obtenerNombreDelUsuario(callback: (String?) -> Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return callback(null)
+        db2.collection("users").document(userId).get()
+            .addOnSuccessListener { snapshot ->
+                val nombre = snapshot.getString("username")
+                callback(nombre)
+            }
+            .addOnFailureListener {
+                callback(null)
+            }
+    }
+
+
+
+
 }

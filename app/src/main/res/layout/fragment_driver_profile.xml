@@ -178,6 +178,7 @@
 
         <!-- Vehículo más usado -->
         <TextView
+            android:id="@+id/tv_vehicle_info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Vehículo más usado: Toyota Corolla"
@@ -216,17 +217,6 @@
             android:textColor="@android:color/white"
             android:backgroundTint="@color/main_color"
             app:cornerRadius="24dp" />
-
-        <!-- Desde -->
-        <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Conductor desde 2022"
-                android:textSize="13sp"
-                android:textColor="@color/text_color"
-                android:alpha="0.7"
-                android:layout_gravity="center"
-                android:layout_marginTop="24dp" />
 
     </LinearLayout>
 </ScrollView>

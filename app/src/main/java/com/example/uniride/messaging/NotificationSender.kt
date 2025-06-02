@@ -20,6 +20,7 @@ object NotificationSender {
             receiverId?.let{ put("receiverId", it)}
             receiverName?.let{ put("receiverName", it)}
             preview?.let{ put("preview", it)}
+            Log.e("datos", "tipo: $tipo, token: $tokenDestino, FromName: $fromName")
         }
 
         val body = json.toString().toRequestBody("application/json".toMediaType())
@@ -31,16 +32,16 @@ object NotificationSender {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                println("Error al enviar notificación: ${e.message}")
+                Log.e("Error:","Error al enviar notificación: ${e.message}")
                 onResult(false)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
-                    println("Notificación enviada correctamente")
+                    Log.d("Correcto:","Notificación enviada correctamente")
                     onResult(true)
                 } else {
-                    println("Error en la respuesta: ${response.code}")
+                    Log.e("Error:","Error en la respuesta: ${response.code}")
                     onResult(false)
                 }
             }
