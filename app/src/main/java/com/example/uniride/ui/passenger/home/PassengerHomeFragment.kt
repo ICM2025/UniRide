@@ -92,6 +92,17 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         )
         applicationInfo.metaData.getString("com.google.android.geo.API_KEY") ?: ""
     }
+    //Revisar periodicamente si hay trip activo
+    private val handler = Handler(Looper.getMainLooper())
+    private val tripCheckInterval: Long = 10000 // cada 10 segundos
+    private val periodicTripCheck = object : Runnable {
+        override fun run() {
+            checkForActiveTrip()
+            handler.postDelayed(this, tripCheckInterval)
+        }
+    }
+    private var hasShownActiveTripMessage = false
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -930,6 +941,11 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
 
     private fun updateUIForActiveTrip() {
+        // Evitar mostrar el mensaje más de una vez
+        if (!hasShownActiveTripMessage) {
+            Toast.makeText(requireContext(), "Tienes un viaje activo", Toast.LENGTH_LONG).show()
+            hasShownActiveTripMessage = true
+        }
         // Ocultar el bottom sheet
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         bottomSheetBehavior.isHideable = true
@@ -940,9 +956,6 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         // Remover el click listener para evitar que abra la búsqueda
         binding.etDestination.setOnClickListener(null)
-
-        // Mostrar mensaje
-        Toast.makeText(requireContext(), "Tienes un viaje activo", Toast.LENGTH_LONG).show()
 
         Log.d("PassengerHome", "UI actualizada para viaje activo")
     }
@@ -961,6 +974,7 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         isInActiveTrip = false
         currentTripId = null
+        hasShownActiveTripMessage = false
 
         // Restaurar UI
         binding.etDestination.isEnabled = true
@@ -1346,6 +1360,8 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         // Verificar viaje activo cada vez que se reanuda el fragment
         checkForActiveTrip()
 
+        handler.postDelayed(periodicTripCheck, tripCheckInterval)
+
         // Centrar apropiadamente después de verificar el viaje
         currentLocation?.let { location ->
             if (!isInActiveTrip) {
@@ -1366,6 +1382,7 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     override fun onPause() {
         super.onPause()
+        handler.removeCallbacks(periodicTripCheck)
         if (hasLocationPermission) {
             locationManager.removeUpdates(this)
         }
@@ -1373,6 +1390,7 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        handler.removeCallbacks(periodicTripCheck)
         tripListener?.remove()
         networkExecutor.shutdown()
         if (hasLocationPermission) {
