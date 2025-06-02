@@ -34,16 +34,25 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="96dp"
+        android:layout_marginEnd="36dp"
+        android:layout_marginBottom="100dp"
         android:backgroundTint="@color/main_color"
         android:iconTint="@android:color/white"
         android:text="Publicar un viaje"
         android:textColor="@android:color/white"
         app:cornerRadius="16dp" />
 
-
-
+    <Button
+            android:id="@+id/btnFinishTrip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="56dp"
+            android:visibility="gone"
+            android:text="Terminar Viaje"
+            android:backgroundTint="#D30000"
+            android:textColor="@android:color/white"
+            android:layout_alignParentBottom="true"
+            />
 
 
 </FrameLayout>

@@ -17,9 +17,14 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.domain.model.DriverTripItem
+import com.example.uniride.domain.model.Route
+import com.example.uniride.domain.model.StopInRoute
+import com.example.uniride.domain.model.Trip
 import com.example.uniride.ui.driver.publish.PublishTripFlowActivity
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -76,34 +81,75 @@ class DriverTripDetailBottomSheet(
 
     private fun updateStartButtonState(view: View) {
         val btnStartTrip = view.findViewById<MaterialButton>(R.id.btn_start_trip)
-        val minutesToDeparture = calculateMinutesToDeparture()
 
-        when {
-            // Ya está activo
-            isActiveTrip() -> {
-                btnStartTrip.text = "Viaje en curso"
-                btnStartTrip.isEnabled = false
-                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_accepted))
-            }
-            // Puede iniciarse (menos de 10 minutos)
-            minutesToDeparture in 0..10 -> {
-                btnStartTrip.text = "Iniciar viaje"
-                btnStartTrip.isEnabled = true
-                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
-            }
-            // Muy temprano para iniciar
-            minutesToDeparture > 10 -> {
-                btnStartTrip.text = "Inicia en ${minutesToDeparture} min"
-                btnStartTrip.isEnabled = false
-                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
-            }
-            // Viaje vencido
-            else -> {
-                btnStartTrip.text = "Viaje vencido"
-                btnStartTrip.isEnabled = false
-                btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_rejected))
+        // CAMBIO: Verificar estado desde Firebase en lugar de SharedPreferences
+        checkTripStatusFromFirebase { isActive, minutesToDeparture ->
+            when {
+                isActive -> {
+                    btnStartTrip.text = "Viaje en curso"
+                    btnStartTrip.isEnabled = false
+                    btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_accepted))
+                }
+                minutesToDeparture in 0..10 -> {
+                    btnStartTrip.text = "Iniciar"
+                    btnStartTrip.isEnabled = true
+                    btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
+                }
+                minutesToDeparture > 10 -> {
+                    btnStartTrip.text = "${minutesToDeparture} min"
+                    btnStartTrip.isEnabled = false
+                    btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_pending))
+                }
+                else -> {
+                    btnStartTrip.text = "Vencido"
+                    btnStartTrip.isEnabled = false
+                    btnStartTrip.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.status_rejected))
+                }
             }
         }
+    }
+
+    private fun checkTripStatusFromFirebase(callback: (isActive: Boolean, minutesToDeparture: Long) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("Trips").document(trip.tripId)
+            .get()
+            .addOnSuccessListener { tripDoc ->
+                if (tripDoc.exists()) {
+                    // Verificar si el viaje está activo basado en el campo 'status' de Firebase
+                    val status = tripDoc.getString("status") ?: "PENDING"
+                    val isActive = status == "ACTIVE" || status == "IN_PROGRESS"
+
+                    val minutesToDeparture = calculateMinutesToDeparture()
+                    callback(isActive, minutesToDeparture)
+                } else {
+                    callback(false, Long.MAX_VALUE)
+                }
+            }
+            .addOnFailureListener {
+                callback(false, Long.MAX_VALUE)
+            }
+    }
+
+    private fun checkActiveTrip(onResult: (String?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+
+        // Buscar cualquier viaje activo del conductor actual
+        db.collection("Trips")
+            .whereEqualTo("idDriver", getCurrentDriverId()) // Necesitas implementar este método
+            .whereIn("status", listOf("ACTIVE", "IN_PROGRESS"))
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    val activeTrip = querySnapshot.documents[0]
+                    onResult(activeTrip.id)
+                } else {
+                    onResult(null)
+                }
+            }
+            .addOnFailureListener {
+                onResult(null)
+            }
     }
 
     private fun calculateMinutesToDeparture(): Long {
@@ -168,54 +214,82 @@ class DriverTripDetailBottomSheet(
     }
 
     private fun startTrip() {
-        val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-
-        val tripId = trip.tripId
-
-        // Verificar si ya hay un viaje activo
-        val currentActiveTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
-        if (!currentActiveTripId.isNullOrEmpty() && currentActiveTripId != tripId) {
-            AlertDialog.Builder(requireContext())
-                .setTitle("Viaje activo")
-                .setMessage("Ya tienes un viaje en curso. ¿Quieres finalizarlo e iniciar este nuevo viaje?")
-                .setPositiveButton("Sí, cambiar viaje") { _, _ ->
-                    proceedToStartTrip(editor, tripId)
-                }
-                .setNegativeButton("Cancelar", null)
-                .show()
-            return
+        checkActiveTrip { activeTripId ->
+            if (activeTripId != null && activeTripId != trip.tripId) {
+                // Ya hay otro viaje activo
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Viaje activo")
+                    .setMessage("Ya tienes un viaje en curso. ¿Quieres finalizarlo e iniciar este nuevo viaje?")
+                    .setPositiveButton("Sí, cambiar viaje") { _, _ ->
+                        // Finalizar el viaje anterior y comenzar el nuevo
+                        finalizeTripInFirebase(activeTripId) {
+                            startTripInFirebase()
+                        }
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            } else {
+                // No hay viaje activo o es el mismo viaje
+                startTripInFirebase()
+            }
         }
-
-        proceedToStartTrip(editor, tripId)
     }
 
-    private fun proceedToStartTrip(editor: android.content.SharedPreferences.Editor, tripId: String) {
-        val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
+    private fun startTripInFirebase() {
+        val db = FirebaseFirestore.getInstance()
 
-        // Marcar esta ruta como activa
-        editor.putBoolean("HAS_ACTIVE_ROUTE", true)
-        editor.putString("ACTIVE_TRIP_ID", tripId)
+        // Log para debuggear
+        android.util.Log.d("TRIP_STATUS", "Iniciando viaje: ${trip.tripId}")
+        android.util.Log.d("TRIP_STATUS", "Estado anterior: PENDING -> Nuevo estado: ACTIVE")
 
-        // Copiar los datos de este viaje específico a las claves que usa el mapa
-        editor.putString("ROUTE_ORIGIN", sharedPreferences.getString("TRIP_${tripId}_ORIGIN", ""))
-        editor.putString("ROUTE_DESTINATION", sharedPreferences.getString("TRIP_${tripId}_DESTINATION", ""))
-        editor.putInt("ROUTE_STOPS_COUNT", sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0))
-        editor.putLong("ROUTE_DATETIME", sharedPreferences.getLong("TRIP_${tripId}_DATETIME", System.currentTimeMillis())) // Nueva línea
+        // Actualizar el estado del viaje en Firebase
+        val updates = hashMapOf<String, Any>(
+            "status" to "ACTIVE",
+            "actualStartTime" to com.google.firebase.Timestamp.now(),
+            "lastUpdated" to com.google.firebase.Timestamp.now()
+        )
 
-        // Copiar cada parada
-        val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
-        for (i in 0 until stopsCount) {
-            editor.putString("ROUTE_STOP_$i", sharedPreferences.getString("TRIP_${tripId}_STOP_$i", ""))
-        }
+        db.collection("Trips").document(trip.tripId)
+            .update(updates)
+            .addOnSuccessListener {
+                android.util.Log.d("TRIP_STATUS", "Viaje actualizado exitosamente a ACTIVE")
 
-        // Guardar hora de inicio real
-        editor.putString("TRIP_${tripId}_ACTUAL_START_TIME",
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")))
+                // Solo guardar mínimos datos necesarios en SharedPreferences para navegación
+                val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
+                val editor = sharedPreferences.edit()
+                editor.putString("ACTIVE_TRIP_ID", trip.tripId)
+                editor.apply()
 
-        editor.apply()
+                showSuccessDialog()
+            }
+            .addOnFailureListener { exception ->
+                android.util.Log.e("TRIP_STATUS", "Error al actualizar estado del viaje", exception)
+                Toast.makeText(requireContext(), "Error al iniciar el viaje: ${exception.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
 
-        // Mostrar diálogo de confirmación
+    private fun finalizeTripInFirebase(tripId: String, onComplete: () -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+
+        val updates = hashMapOf<String, Any>(
+            "status" to "TERMINATED",
+            "endTime" to com.google.firebase.Timestamp.now(),
+            "lastUpdated" to com.google.firebase.Timestamp.now()
+        )
+
+        db.collection("Trips").document(tripId)
+            .update(updates)
+            .addOnSuccessListener {
+                onComplete()
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al finalizar viaje anterior", Toast.LENGTH_SHORT).show()
+                onComplete() // Continuar de todas formas
+            }
+    }
+
+    // NUEVO: Método para mostrar diálogo de éxito
+    private fun showSuccessDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_success_request, null)
         dialogView.findViewById<TextView>(R.id.tv_success).text = "¡Viaje iniciado!"
         dialogView.findViewById<TextView>(R.id.tv_secondary).text = "Tu viaje ha comenzado exitosamente"
@@ -235,7 +309,6 @@ class DriverTripDetailBottomSheet(
             try {
                 parentFragment?.findNavController()?.navigate(R.id.nav_home)
             } catch (e: Exception) {
-                // Si no funciona la navegación, intentar con el activity
                 (requireActivity() as? androidx.navigation.NavController)?.let { navController ->
                     navController.navigate(R.id.driverHomeFragment)
                 }
@@ -244,47 +317,23 @@ class DriverTripDetailBottomSheet(
     }
 
     private fun editTrip() {
-        // No permitir editar viajes activos
-        if (isActiveTrip()) {
-            Toast.makeText(requireContext(), "No puedes editar un viaje que está en curso", Toast.LENGTH_SHORT).show()
-            return
+        checkTripStatusFromFirebase { isActive, _ ->
+            if (isActive) {
+                Toast.makeText(
+                    requireContext(),
+                    "No puedes editar un viaje que está en curso",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@checkTripStatusFromFirebase
+            }
+
+            // Continuar con la lógica de edición...
+            val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
+            intent.putExtra("IS_EDITING", true)
+            intent.putExtra("TRIP_ID", trip.tripId)
+            startActivity(intent)
+            dismiss()
         }
-
-        val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        val tripId = trip.tripId
-
-        // Preparar los datos para edición - usar las claves que el PublishRouteFragment espera
-        editor.putString("EDITING_TRIP_ID", tripId)
-        editor.putBoolean("IS_EDITING_TRIP", true)
-
-        // Copiar los datos del viaje que se va a editar a las claves temporales correctas
-        val origin = sharedPreferences.getString("TRIP_${tripId}_ORIGIN", "") ?: ""
-        val destination = sharedPreferences.getString("TRIP_${tripId}_DESTINATION", "") ?: ""
-        val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
-        val dateTime = sharedPreferences.getLong("TRIP_${tripId}_DATETIME", System.currentTimeMillis()) // Nueva línea
-
-        editor.putString("EDIT_ROUTE_ORIGIN", origin)
-        editor.putString("EDIT_ROUTE_DESTINATION", destination)
-        editor.putInt("EDIT_ROUTE_STOPS_COUNT", stopsCount)
-        editor.putLong("EDIT_ROUTE_DATETIME", dateTime) // Nueva línea
-
-        // Copiar todas las paradas
-        for (i in 0 until stopsCount) {
-            val stop = sharedPreferences.getString("TRIP_${tripId}_STOP_$i", "") ?: ""
-            editor.putString("EDIT_ROUTE_STOP_$i", stop)
-        }
-
-        editor.apply()
-
-        // Crear intent con la información necesaria
-        val intent = Intent(requireContext(), PublishTripFlowActivity::class.java)
-        intent.putExtra("IS_EDITING", true)
-        intent.putExtra("TRIP_ID", tripId)
-
-        // Iniciar la actividad y cerrar el bottom sheet
-        startActivity(intent)
-        dismiss()
     }
 
     private fun showCancelConfirmation() {
@@ -311,69 +360,38 @@ class DriverTripDetailBottomSheet(
     }
 
     private fun cancelTrip() {
-        val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
+        val db = FirebaseFirestore.getInstance()
 
-        val tripId = trip.tripId
+        val updates = hashMapOf<String, Any>(
+            "status" to "CANCELLED",
+            "cancelledAt" to com.google.firebase.Timestamp.now(),
+            "lastUpdated" to com.google.firebase.Timestamp.now()
+        )
 
-        // Eliminar todos los datos relacionados con este viaje
-        editor.remove("TRIP_${tripId}_ORIGIN")
-        editor.remove("TRIP_${tripId}_DESTINATION")
-        editor.remove("TRIP_${tripId}_STOPS_COUNT")
-        editor.remove("TRIP_${tripId}_DEPARTURE_TIME")
-        editor.remove("TRIP_${tripId}_DATE")
-        editor.remove("TRIP_${tripId}_ACTUAL_START_TIME")
+        db.collection("Trips").document(trip.tripId)
+            .update(updates)
+            .addOnSuccessListener {
+                // Limpiar SharedPreferences solo si era el viaje activo
+                val sharedPreferences = requireContext().getSharedPreferences("route_data", Context.MODE_PRIVATE)
+                val activeTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
 
-        // Eliminar las paradas
-        val stopsCount = sharedPreferences.getInt("TRIP_${tripId}_STOPS_COUNT", 0)
-        for (i in 0 until stopsCount) {
-            editor.remove("TRIP_${tripId}_STOP_$i")
-        }
+                if (activeTripId == trip.tripId) {
+                    val editor = sharedPreferences.edit()
+                    editor.remove("ACTIVE_TRIP_ID")
+                    editor.apply()
+                }
 
-        // Remover el ID del viaje de la lista de viajes guardados
-        val tripIds = sharedPreferences.getStringSet("SAVED_TRIP_IDS", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-        tripIds.remove(tripId)
-        editor.putStringSet("SAVED_TRIP_IDS", tripIds)
-
-        // Si este era el viaje activo, desactivarlo
-        val activeTripId = sharedPreferences.getString("ACTIVE_TRIP_ID", "")
-        if (activeTripId == tripId) {
-            editor.putBoolean("HAS_ACTIVE_ROUTE", false)
-            editor.remove("ACTIVE_TRIP_ID")
-            editor.remove("ROUTE_ORIGIN")
-            editor.remove("ROUTE_DESTINATION")
-            editor.remove("ROUTE_STOPS_COUNT")
-
-            for (i in 0 until stopsCount) {
-                editor.remove("ROUTE_STOP_$i")
+                Toast.makeText(requireContext(), "Viaje cancelado exitosamente", Toast.LENGTH_SHORT).show()
+                onTripUpdated?.invoke()
+                dismiss()
             }
-        }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cancelar el viaje", Toast.LENGTH_SHORT).show()
+            }
+    }
 
-        // Si no hay más viajes, marcar que no hay rutas publicadas
-        if (tripIds.isEmpty()) {
-            editor.putBoolean("HAS_PUBLISHED_ROUTE", false)
-        }
-
-        // Limpiar datos temporales de edición si existen
-        editor.remove("IS_EDITING_TRIP")
-        editor.remove("EDITING_TRIP_ID")
-        editor.remove("EDIT_ROUTE_ORIGIN")
-        editor.remove("EDIT_ROUTE_DESTINATION")
-        editor.remove("EDIT_ROUTE_STOPS_COUNT")
-
-        val editStopsCount = sharedPreferences.getInt("EDIT_ROUTE_STOPS_COUNT", 0)
-        for (i in 0 until editStopsCount) {
-            editor.remove("EDIT_ROUTE_STOP_$i")
-        }
-
-        editor.apply()
-
-        val message = if (isActiveTrip()) "Viaje finalizado exitosamente" else "Viaje cancelado exitosamente"
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-
-        // Notificar que el viaje se actualizó
-        onTripUpdated?.invoke()
-
-        dismiss()
+    private fun getCurrentDriverId(): String {
+        // Ejemplo con Firebase Auth:
+        return FirebaseAuth.getInstance().currentUser?.uid ?: ""
     }
 }
