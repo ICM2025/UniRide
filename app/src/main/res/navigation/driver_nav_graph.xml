@@ -13,6 +13,9 @@
         <action
             android:id="@+id/action_driverHomeFragment_to_registerDriverFragment"
             app:destination="@id/registerDriverFragment" />
+        <action
+            android:id="@+id/action_driverHomeFragment_to_rateUserFragment"
+            app:destination="@id/rateUserFragment" />
     </fragment>
 
     <fragment
@@ -52,4 +55,18 @@
             android:name="receiverName"
             app:argType="string" />
     </fragment>
+    <fragment
+        android:id="@+id/rateUserFragment"
+        android:name="com.example.uniride.ui.driver.home.RateUserFragment"
+        android:label="RateUserFragment">
+        <argument
+            android:name="tripId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_rateUserFragment_to_driverHomeFragment"
+            app:destination="@id/driverHomeFragment" />
+    </fragment>
+
+
+
 </navigation>

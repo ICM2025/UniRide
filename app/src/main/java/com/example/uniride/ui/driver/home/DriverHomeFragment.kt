@@ -60,6 +60,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private var _binding: FragmentDriverHomeBinding? = null
     private val binding get() = _binding!!
+    private var isDriver: Boolean = false
     private val UPDATE_DISTANCE = 100f
     private var isInActiveTrip = false
     private val FINISH_TRIP_DISTANCE = 100f
@@ -145,6 +146,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
         db.collection("drivers").document(uid).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
+                    isDriver = true
                     // si es conductor se muestran los componentes de home
                     binding.btnPublishTrip.visibility = View.VISIBLE
                     mapFragment?.view?.visibility = View.VISIBLE
@@ -218,6 +220,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     private fun updatePublishTripButton() {
+        //Si no es conductor no entra
+        if (!isDriver) return
         checkActiveTrip { hasActiveTrip ->
             if (hasActiveTrip) {
                 binding.btnPublishTrip.visibility = View.GONE
@@ -245,6 +249,8 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     private fun updateFinishTripButton() {
+        //si no es conductor no entra
+        if (!isDriver) return
         checkActiveTrip { hasActiveTrip ->
             if (hasActiveTrip && isNearDestination) {
                 binding.btnFinishTrip.visibility = View.VISIBLE
@@ -1186,7 +1192,11 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             }
     }
 
-    private fun updateTripStatusToTerminated(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
+    private fun updateTripStatusToTerminated(
+        tripId: String,
+        db: FirebaseFirestore,
+        loadingDialog: androidx.appcompat.app.AlertDialog
+    ) {
         val updateData = hashMapOf<String, Any>(
             "status" to "TERMINATED",
             "endTime" to com.google.firebase.Timestamp.now(),
@@ -1199,6 +1209,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 loadingDialog.dismiss()
 
                 // Limpiar estado local
+                binding.btnFinishTrip.visibility = View.GONE
                 isInActiveTrip = false
                 isNearDestination = false
                 mMap?.clear()
@@ -1207,12 +1218,17 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 isRouteDisplayed = false
                 preventLocationCameraUpdate = false
                 lastUpdateLocation = null
+
+                val action = DriverHomeFragmentDirections
+                    .actionDriverHomeFragmentToRateUserFragment(tripId)
+                findNavController().navigate(action)
             }
             .addOnFailureListener { e ->
                 loadingDialog.dismiss()
                 Toast.makeText(requireContext(), "Error al finalizar viaje: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
+
 
     override fun onResume() {
         super.onResume()

@@ -9,11 +9,25 @@
         android:id="@+id/passengerHomeFragment"
         android:name="com.example.uniride.ui.passenger.home.PassengerHomeFragment"
         android:label="Inicio"
-        tools:layout="@layout/fragment_passenger_home" />
+        tools:layout="@layout/fragment_passenger_home" >
+        <action
+            android:id="@+id/action_passengerHomeFragment_to_rateDriverFragment"
+            app:destination="@id/rateDriverFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/passengerRequestsFragment"
         android:name="com.example.uniride.ui.passenger.requests.PassengerRequestsFragment"
         android:label="Mis solicitudes"
         tools:layout="@layout/fragment_passenger_requests" />
+    <fragment
+        android:id="@+id/rateDriverFragment"
+        android:name="com.example.uniride.ui.passenger.home.RateDriverFragment"
+        android:label="Calificar conductor">
+
+        <argument
+            android:name="tripId"
+            app:argType="string" />
+    </fragment>
+
 </navigation>

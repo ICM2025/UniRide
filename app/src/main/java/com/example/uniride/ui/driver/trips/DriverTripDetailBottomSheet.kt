@@ -66,7 +66,7 @@ class DriverTripDetailBottomSheet(
         ivVehicleIcon.setImageResource(info.carIcon)
 
         // Cupos
-        val totalSeats = info.availableSeats
+        val totalSeats = info.availableSeats + trip.acceptedCount
         val occupiedSeats = trip.acceptedCount
         val progress = if (totalSeats > 0) (occupiedSeats * 100) / totalSeats else 0
 

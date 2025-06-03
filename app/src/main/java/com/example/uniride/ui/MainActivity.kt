@@ -24,6 +24,7 @@ import com.example.uniride.domain.model.DrawerOption
 import com.example.uniride.ui.auth.AuthActivity
 import com.example.uniride.ui.driver.drawer.DriverDrawerFlowActivity
 import com.example.uniride.ui.passenger.drawer.PassengerDrawerFlowActivity
+import com.example.uniride.ui.passenger.search.SearchFlowActivity
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -41,8 +42,7 @@ class MainActivity : AppCompatActivity() {
     private val sensorListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent?) {
             val now = System.currentTimeMillis()
-            // evita múltiples llamadas seguidas
-            if (event == null || (now - lastShakeTime) < 1000) return
+            if (event == null || (now - lastShakeTime) < 10) return
 
             val x = event.values[0]
             val y = event.values[1]
@@ -52,23 +52,30 @@ class MainActivity : AppCompatActivity() {
 
             if (acceleration > 12) {
                 lastShakeTime = now
-
-                //Se revisa si es pasajero o no
+                //si es pasajero lleva a buscar un viaje si es conductor a el chat
                 val isPassenger = viewModel.isPassengerMode.value
-                val destination = if (isPassenger)
-                    R.id.passengerProfileFragment
-                else
-                    R.id.driverProfileFragment
                 val activityClass = if (isPassenger)
-                    PassengerDrawerFlowActivity::class.java
+                    SearchFlowActivity::class.java
                 else
-                    DriverDrawerFlowActivity::class.java
-                Log.e("acele","Entrando al perfil ${if (isPassenger) "pasajero" else "conductor"}")
-                val intent = Intent(this@MainActivity, activityClass)
-                intent.putExtra("destination", destination)
+                    ChatsActivity::class.java
+
+                val destination = if (isPassenger)
+                    R.id.searchInputFragment
+                else
+                    R.id.chatFragment
+
+                Log.e("acele", "Entrando a ${if (isPassenger) "búsqueda de viaje" else "perfil del conductor"}")
+
+                val intent = Intent(this@MainActivity, activityClass).apply {
+                    //para que no se generen multiples instancias en el stack
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    putExtra("destination", destination)
+                }
                 startActivity(intent)
+
             }
         }
+
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }

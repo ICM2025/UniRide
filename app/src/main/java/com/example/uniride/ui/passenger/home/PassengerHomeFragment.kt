@@ -41,6 +41,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.navigation.fragment.findNavController
 
 class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
@@ -1006,17 +1007,23 @@ class PassengerHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
 
     private fun handleTripTerminated() {
-        // Limpiar listeners
         tripListener?.remove()
         tripListener = null
 
+        val tripIdFinalizado = currentTripId
+
         Toast.makeText(requireContext(), "El viaje ha terminado", Toast.LENGTH_LONG).show()
 
-        // Restablecer UI al estado normal
         resetUIForNormalState()
-
         Log.d("PassengerHome", "Viaje terminado, UI restablecida")
+        tripIdFinalizado?.let {
+            val action = PassengerHomeFragmentDirections
+                .actionPassengerHomeFragmentToRateDriverFragment(it)
+            findNavController().navigate(action)
+        }
     }
+
+
 
     private fun decodePoly(encoded: String): List<LatLng> {
         val poly = ArrayList<LatLng>()

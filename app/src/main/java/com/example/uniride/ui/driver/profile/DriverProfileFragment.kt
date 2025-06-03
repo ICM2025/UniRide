@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -120,6 +121,7 @@ class DriverProfileFragment : Fragment() {
         loadFirebaseData()
         loadProfileData()
         updateProfileUI()
+        loadDriverStats()
 
         binding.btnBack.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -532,6 +534,32 @@ class DriverProfileFragment : Fragment() {
             apply()
         }
     }
+
+    private fun loadDriverStats() {
+
+        val currentUser = auth.currentUser ?: return
+        firestore.collection("DriverStats").document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { doc ->
+                val binding = _binding ?: return@addOnSuccessListener
+
+                if (doc != null && doc.exists()) {
+                    val tripsPublished = doc.getLong("tripsPublished") ?: 0
+                    val rating = doc.getDouble("rating") ?: 0.0
+                    val passengers = doc.getLong("passengersTransported") ?: 0
+
+                    binding.tvTrips.text = tripsPublished.toString()
+                    val ratingText = "${String.format("%.1f", rating)} ★"
+                    binding.tvRating.text = ratingText
+                    binding.tvPassengers.text = passengers.toString()
+                }
+
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar estadísticas", Toast.LENGTH_SHORT).show()
+            }
+    }
+
 
     override fun onPause() {
         super.onPause()
