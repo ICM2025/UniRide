@@ -61,6 +61,7 @@ class RateUserFragment : Fragment() {
             .get()
             .addOnSuccessListener { requests ->
                 val acceptedIds = requests.mapNotNull { it.getString("idUser") }
+
                 if (acceptedIds.isEmpty()) {
                     Toast.makeText(requireContext(), "No hay pasajeros para calificar", Toast.LENGTH_SHORT).show()
                     return@addOnSuccessListener
@@ -75,6 +76,8 @@ class RateUserFragment : Fragment() {
                             val id = doc.id
                             val name = doc.getString("username") ?: "Pasajero"
                             val profileUrl = doc.getString("imgProfile")
+
+
                             ratingItems.add(
                                 PassengerRatingItem(
                                     idUser = id,
@@ -85,11 +88,15 @@ class RateUserFragment : Fragment() {
                         }
                         adapter.notifyDataSetChanged()
                     }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(requireContext(), "Error al cargar usuarios", Toast.LENGTH_SHORT).show()
+                    }
             }
-            .addOnFailureListener {
+            .addOnFailureListener { e ->
                 Toast.makeText(requireContext(), "Error al cargar pasajeros", Toast.LENGTH_SHORT).show()
             }
     }
+
 
     private fun submitRatings() {
         val ratings = adapter.getRatings()
@@ -102,14 +109,29 @@ class RateUserFragment : Fragment() {
         }
 
         db.runTransaction { transaction ->
+            // Primero recolectar los snapshots de todos los UserStats
+            val snapshots = mutableMapOf<String, com.google.firebase.firestore.DocumentSnapshot>()
             for (item in ratings) {
                 val statsRef = db.collection("UserStats").document(item.idUser)
                 val snapshot = transaction.get(statsRef)
+                snapshots[item.idUser] = snapshot
+            }
+
+            // escrotira de calificaciones
+            for (item in ratings) {
+                val statsRef = db.collection("UserStats").document(item.idUser)
+                val snapshot = snapshots[item.idUser]!!
                 val newRating = item.stars
 
                 if (snapshot.exists()) {
                     val oldAvg = snapshot.getDouble("rating") ?: 0.0
-                    val oldCount = snapshot.getLong("tripsTaken") ?: 0
+                    val rawCount = snapshot.get("tripsTaken")
+                    val oldCount = when (rawCount) {
+                        is Number -> rawCount.toLong()
+                        is String -> rawCount.toLongOrNull() ?: 0L
+                        else -> 0L
+                    }
+
                     val newAvg = ((oldAvg * oldCount) + newRating) / (oldCount + 1)
 
                     transaction.update(statsRef, mapOf(
@@ -123,22 +145,37 @@ class RateUserFragment : Fragment() {
                         "tripsTaken" to 1
                     ))
                 }
+            }
+        }.addOnSuccessListener {
 
-                val ratingRef = db.collection("UserRatings").document()
-                transaction.set(ratingRef, mapOf(
+            // Guardar ratings
+            val ratingCollection = db.collection("UserRatings")
+            var completed = 0
+            for (item in ratings) {
+                val ratingData = mapOf(
                     "idTrip" to tripId,
                     "idPassenger" to item.idUser,
                     "idDriver" to idDriver,
                     "stars" to item.stars,
                     "timestamp" to Timestamp.now()
-                ))
+                )
+                ratingCollection.add(ratingData)
+                    .addOnSuccessListener {
+                        completed++
+                        if (completed == ratings.size) {
+                            Toast.makeText(requireContext(), "Calificaciones enviadas", Toast.LENGTH_SHORT).show()
+                            findNavController().navigate(R.id.action_rateUserFragment_to_driverHomeFragment)
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                    }
             }
-        }.addOnSuccessListener {
-            Toast.makeText(requireContext(), "Calificaciones enviadas", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_rateUserFragment_to_driverHomeFragment)
-        }.addOnFailureListener {
+        }.addOnFailureListener { e ->
             Toast.makeText(requireContext(), "Error al guardar calificaciones", Toast.LENGTH_SHORT).show()
         }
     }
+
+
+
 }
 
