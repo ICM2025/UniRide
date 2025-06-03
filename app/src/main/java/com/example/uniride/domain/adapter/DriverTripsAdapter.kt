@@ -36,8 +36,9 @@ class DriverTripsAdapter(
             tvDateTime.text = "${travel.travelDate} - ${travel.departureTime}"
 
             // Cupos
-            tvPassengers.text = "${item.acceptedCount}/${travel.availableSeats} pasajeros"
-            progressCircle.max = travel.availableSeats
+            val totalSeats = item.acceptedCount + travel.availableSeats
+            tvPassengers.text = "${item.acceptedCount}/$totalSeats pasajeros"
+            progressCircle.max = totalSeats
             progressCircle.progress = item.acceptedCount
 
             // Solicitudes pendientes

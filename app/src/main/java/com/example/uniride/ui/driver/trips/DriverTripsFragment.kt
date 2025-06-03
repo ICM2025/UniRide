@@ -75,57 +75,75 @@ class DriverTripsFragment : Fragment() {
         var completedCount = 0
 
         for (trip in trips) {
-            db.collection("Routes").document(trip.idRoute)
+            val tripId = trip.id ?: continue
+
+            db.collection("PassengerRequests")
+                .whereEqualTo("idTrip", tripId)
                 .get()
-                .addOnSuccessListener { routeSnap ->
-                    val route = routeSnap.toObject(Route::class.java) ?: return@addOnSuccessListener
+                .addOnSuccessListener { reqSnap ->
+                    val acceptedCount = reqSnap.documents.count { it.getString("status") == "ACCEPTED" }
+                    val pendingCount = reqSnap.documents.count { it.getString("status") == "PENDING" }
 
-                    fetchStopNames(route.idOrigin, route.idDestination) { origin, destination ->
-                        db.collection("Cars").document(trip.idCar)
-                            .get()
-                            .addOnSuccessListener { carSnap ->
-                                val car = carSnap.toObject(Car::class.java)
+                    val isFull = acceptedCount >= trip.places + acceptedCount
 
-                                val parsedDate = try {
-                                    LocalDate.parse(trip.date)
-                                } catch (e: Exception) {
-                                    LocalDate.now()
-                                }
+                    db.collection("Routes").document(trip.idRoute)
+                        .get()
+                        .addOnSuccessListener { routeSnap ->
+                            val route = routeSnap.toObject(Route::class.java) ?: return@addOnSuccessListener
 
-                                val tripInfo = TripInformation(
-                                    carIcon = R.drawable.ic_car,
-                                    availableSeats = trip.places,
-                                    origin = origin,
-                                    destination = destination,
-                                    departureTime = trip.startTime,
-                                    travelDate = parsedDate,
-                                    price = trip.price,
-                                    carName = "${car?.brand} ${car?.model}",
-                                    carPlate = car?.licensePlate ?: "Sin placa"
-                                )
+                            fetchStopNames(route.idOrigin, route.idDestination) { origin, destination ->
+                                db.collection("Cars").document(trip.idCar)
+                                    .get()
+                                    .addOnSuccessListener { carSnap ->
+                                        val car = carSnap.toObject(Car::class.java)
 
-                                val item = DriverTripItem(
-                                    tripInformation = tripInfo,
-                                    acceptedCount = 1,
-                                    pendingCount = 2,
-                                    isFull = false,
-                                    hasNewMessages = false,
-                                    tripId = trip.id ?: "" // Usar el ID del documento de Firebase
-                                )
+                                        val parsedDate = try {
+                                            LocalDate.parse(trip.date)
+                                        } catch (e: Exception) {
+                                            LocalDate.now()
+                                        }
 
-                                items.add(item)
-                                completedCount++
-                                if (completedCount == trips.size) {
-                                    showTrips(items)
-                                }
+                                        val tripInfo = TripInformation(
+                                            carIcon = R.drawable.ic_car,
+                                            availableSeats = trip.places,
+                                            origin = origin,
+                                            destination = destination,
+                                            departureTime = trip.startTime,
+                                            travelDate = parsedDate,
+                                            price = trip.price,
+                                            carName = "${car?.brand} ${car?.model}",
+                                            carPlate = car?.licensePlate ?: "Sin placa"
+                                        )
+
+                                        val item = DriverTripItem(
+                                            tripInformation = tripInfo,
+                                            acceptedCount = acceptedCount,
+                                            pendingCount = pendingCount,
+                                            isFull = isFull,
+                                            hasNewMessages = false,
+                                            tripId = tripId
+                                        )
+
+                                        items.add(item)
+                                        completedCount++
+                                        if (completedCount == trips.size) {
+                                            showTrips(items)
+                                        }
+                                    }
+                                    .addOnFailureListener {
+                                        completedCount++
+                                        if (completedCount == trips.size) {
+                                            showTrips(items)
+                                        }
+                                    }
                             }
-                            .addOnFailureListener {
-                                completedCount++
-                                if (completedCount == trips.size) {
-                                    showTrips(items)
-                                }
+                        }
+                        .addOnFailureListener {
+                            completedCount++
+                            if (completedCount == trips.size) {
+                                showTrips(items)
                             }
-                    }
+                        }
                 }
                 .addOnFailureListener {
                     completedCount++
@@ -135,6 +153,7 @@ class DriverTripsFragment : Fragment() {
                 }
         }
     }
+
 
 
     //convierte id de origen y destino a sus nombres correspondientes
