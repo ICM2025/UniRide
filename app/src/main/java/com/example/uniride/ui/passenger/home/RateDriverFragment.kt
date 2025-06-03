@@ -39,7 +39,7 @@ class RateDriverFragment : Fragment() {
 
         val tripId = args.tripId
 
-        // Paso 1: obtener idDriver
+        // obtener el driver
         db.collection("Trips").document(tripId).get()
             .addOnSuccessListener { tripDoc ->
                 if (tripDoc.exists()) {
@@ -113,7 +113,7 @@ class RateDriverFragment : Fragment() {
 
         db.collection("DriverRatings").add(ratingData)
             .addOnSuccessListener {
-                updateDriverStats(driverId, stars)
+                updateDriverStats(driverId, tripId, stars)
                 Toast.makeText(requireContext(), "Calificación enviada", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
             }
@@ -122,39 +122,49 @@ class RateDriverFragment : Fragment() {
             }
     }
 
-    private fun updateDriverStats(driverId: String, newRating: Int) {
+    private fun updateDriverStats(driverId: String, tripId: String, newRating: Int) {
         val statsRef = db.collection("DriverStats").document(driverId)
+        val requestsRef = db.collection("PassengerRequests")
 
-        statsRef.get()
-            .addOnSuccessListener { doc ->
-                if (doc.exists()) {
-                    val stats = doc.toObject(DriverStats::class.java)
-                    if (stats != null) {
-                        val oldAvg = stats.rating
-                        val oldCount = stats.passengersTransported
-                        val newAvg = ((oldAvg * oldCount) + newRating) / (oldCount + 1)
+        // contar cuantos pasajeros hubo en el viaje
+        requestsRef
+            .whereEqualTo("idTrip", tripId)
+            .whereEqualTo("status", "ACCEPTED")
+            .get()
+            .addOnSuccessListener { requests ->
+                val passengersInTrip = requests.size()
 
-                        statsRef.update(
-                            mapOf(
-                                "passengersTransported" to oldCount + 1,
-                                "rating" to newAvg
+                statsRef.get()
+                    .addOnSuccessListener { doc ->
+                        if (doc.exists()) {
+                            val stats = doc.toObject(DriverStats::class.java)
+                            if (stats != null) {
+                                val oldAvg = stats.rating
+                                val oldCount = stats.passengersTransported
+                                val newTotal = oldCount + passengersInTrip
+                                val newAvg = ((oldAvg * oldCount) + (newRating * passengersInTrip)) / newTotal
+
+                                statsRef.update(
+                                    mapOf(
+                                        "passengersTransported" to newTotal,
+                                        "rating" to newAvg
+                                    )
+                                )
+                            }
+                        } else {
+                            // Si el doc no existe, lo creamos con este primer viaje
+                            statsRef.set(
+                                DriverStats(
+                                    idDriver = driverId,
+                                    tripsPublished = 0,
+                                    passengersTransported = passengersInTrip,
+                                    rating = newRating.toDouble()
+                                )
                             )
-                        )
+                        }
                     }
-                } else {
-                    // Crear el documento si no existe
-                    statsRef.set(
-                        DriverStats(
-                            idDriver = driverId,
-                            tripsPublished = 0,
-                            passengersTransported = 1,
-                            rating = newRating.toDouble()
-                        )
-                    )
-                }
             }
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()
