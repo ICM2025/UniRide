@@ -109,6 +109,7 @@ class PassengerProfileFragment : Fragment() {
         loadFirebaseData()
         loadProfileData()
         updateProfileUI()
+        loadPassengerStats()
 
         binding.btnBack.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -526,6 +527,29 @@ class PassengerProfileFragment : Fragment() {
             apply()
         }
     }
+    //estadísticas del usuario
+    private fun loadPassengerStats() {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val firestore = FirebaseFirestore.getInstance()
+
+        firestore.collection("UserStats").document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc != null && doc.exists()) {
+                    val tripsTaken = doc.getLong("tripsTaken") ?: 0
+                    val rating = doc.getDouble("rating") ?: 0.0
+
+                    binding.tvTrips.text = tripsTaken.toString()
+                    binding.tvRating.text = "${String.format("%.1f", rating)}★"
+                    //por ahora quemado
+                    binding.tvReviews.text = "3"
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar estadísticas", Toast.LENGTH_SHORT).show()
+            }
+    }
+
 
     override fun onPause() {
         super.onPause()
