@@ -114,10 +114,11 @@
                 android:gravity="center">
 
                 <TextView
+                    android:id="@+id/tvRating"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="4.8 ★"
-                    android:textSize="16sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_color" />
                 <TextView
@@ -137,16 +138,17 @@
                 android:gravity="center">
 
                 <TextView
+                    android:id="@+id/tvTrips"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="123"
-                    android:textSize="16sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_color" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Viajes completados"
+                    android:text="Viajes publicados"
                     android:textSize="12sp"
                     android:textColor="@color/text_color"
                     android:alpha="0.7" />
@@ -160,17 +162,18 @@
                 android:gravity="center">
 
                 <TextView
+                    android:id="@+id/tvPassengers"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="87"
-                    android:textSize="16sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_color" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Opiniones"
-                    android:textSize="12sp"
+                    android:text="Pasajeros transportados"
+                    android:textSize="11sp"
                     android:textColor="@color/text_color"
                     android:alpha="0.7" />
             </LinearLayout>
