@@ -1192,7 +1192,11 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
             }
     }
 
-    private fun updateTripStatusToTerminated(tripId: String, db: FirebaseFirestore, loadingDialog: androidx.appcompat.app.AlertDialog) {
+    private fun updateTripStatusToTerminated(
+        tripId: String,
+        db: FirebaseFirestore,
+        loadingDialog: androidx.appcompat.app.AlertDialog
+    ) {
         val updateData = hashMapOf<String, Any>(
             "status" to "TERMINATED",
             "endTime" to com.google.firebase.Timestamp.now(),
@@ -1205,6 +1209,7 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 loadingDialog.dismiss()
 
                 // Limpiar estado local
+                binding.btnFinishTrip.visibility = View.GONE
                 isInActiveTrip = false
                 isNearDestination = false
                 mMap?.clear()
@@ -1213,12 +1218,17 @@ class DriverHomeFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 isRouteDisplayed = false
                 preventLocationCameraUpdate = false
                 lastUpdateLocation = null
+
+                val action = DriverHomeFragmentDirections
+                    .actionDriverHomeFragmentToRateUserFragment(tripId)
+                findNavController().navigate(action)
             }
             .addOnFailureListener { e ->
                 loadingDialog.dismiss()
                 Toast.makeText(requireContext(), "Error al finalizar viaje: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
+
 
     override fun onResume() {
         super.onResume()
