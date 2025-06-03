@@ -961,12 +961,36 @@ class PublishRouteFragment : Fragment() {
         //guarda el viaje en la base de datos
         tripRef.set(trip)
             .addOnSuccessListener {
+                // actualiza estadísticas del conductor
+                uid?.let { updateDriverStatsTripCount(it) }
+
                 showTripSuccessDialog()
             }
             .addOnFailureListener {
                 Toast.makeText(requireContext(), "Error al publicar el viaje", Toast.LENGTH_SHORT).show()
             }
     }
+
+    private fun updateDriverStatsTripCount(driverId: String) {
+        val statsRef = db.collection("DriverStats").document(driverId)
+
+        statsRef.get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    // Solo incrementa tripsPublished
+                    statsRef.update("tripsPublished", com.google.firebase.firestore.FieldValue.increment(1))
+                } else {
+                    // Crear solo tripsPublished, no toques rating ni passengersTransported
+                    val data = mapOf(
+                        "idDriver" to driverId,
+                        "tripsPublished" to 1
+                    )
+                    statsRef.set(data, com.google.firebase.firestore.SetOptions.merge())
+                }
+            }
+    }
+
+
 
 
     //mensaje de exito al publicar un viaje
