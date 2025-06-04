@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/scrollView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingVertical="32dp"
+    android:paddingHorizontal="24dp"
+    android:background="@color/white">
+
+    <LinearLayout
+        android:id="@+id/container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp">
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_button_circle"
+                android:padding="8dp"
+                android:src="@drawable/ic_arrow_left"
+                android:contentDescription="Volver"
+                app:tint="@color/main_color"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginStart="4dp" />
+
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Registro como Conductor"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_color"
+                android:layout_marginStart="16dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="@id/btn_back"
+                app:layout_constraintEnd_toEndOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+
+        <ImageView
+            android:id="@+id/ivLicensePreview"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"
+            android:background="@drawable/bg_item_finished"
+            android:contentDescription="Previsualización de la licencia"
+            android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUploadLicense"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Subir imagen de licencia"
+            android:iconTint="@android:color/white"
+            android:backgroundTint="@color/secondary_color"
+            android:textColor="@android:color/white"
+            app:cornerRadius="16dp"
+            android:layout_marginBottom="24dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirmRegister"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Confirmar registro"
+            android:backgroundTint="@color/main_color"
+            android:textColor="@android:color/white"
+            app:cornerRadius="16dp" />
+    </LinearLayout>
+</ScrollView>

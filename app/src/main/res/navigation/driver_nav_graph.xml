@@ -9,7 +9,14 @@
         android:id="@+id/driverHomeFragment"
         android:name="com.example.uniride.ui.driver.home.DriverHomeFragment"
         android:label="Publicar viaje"
-        tools:layout="@layout/fragment_driver_home" />
+        tools:layout="@layout/fragment_driver_home" >
+        <action
+            android:id="@+id/action_driverHomeFragment_to_registerDriverFragment"
+            app:destination="@id/registerDriverFragment" />
+        <action
+            android:id="@+id/action_driverHomeFragment_to_rateUserFragment"
+            app:destination="@id/rateUserFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/driverTripsFragment"
@@ -20,5 +27,46 @@
         android:id="@+id/tripRequestsFragment"
         android:name="com.example.uniride.ui.driver.trips.TripRequestsFragment"
         android:label="fragment_trip_request"
-        tools:layout="@layout/fragment_trip_request" />
+        tools:layout="@layout/fragment_trip_request" >
+        <action
+            android:id="@+id/action_tripRequestsFragment_to_chatFragment"
+            app:destination="@id/chatFragment" />
+
+    </fragment>
+    <fragment
+        android:id="@+id/registerDriverFragment"
+        android:name="com.example.uniride.ui.driver.home.RegisterDriverFragment"
+        android:label="RegisterDriverFragment" >
+        <action
+            android:id="@+id/action_registerDriverFragment_to_driverHomeFragment"
+            app:destination="@id/driverHomeFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.example.uniride.chats.ChatFragment"
+        android:label="Chat"
+        tools:layout="@layout/fragment_chat">
+
+        <argument
+            android:name="receiverId"
+            app:argType="string" />
+
+        <argument
+            android:name="receiverName"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/rateUserFragment"
+        android:name="com.example.uniride.ui.driver.home.RateUserFragment"
+        android:label="RateUserFragment">
+        <argument
+            android:name="tripId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_rateUserFragment_to_driverHomeFragment"
+            app:destination="@id/driverHomeFragment" />
+    </fragment>
+
+
+
 </navigation>

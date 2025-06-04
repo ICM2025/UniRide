@@ -1,22 +1,22 @@
 package com.example.uniride.domain.adapter
 
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.uniride.R
-import com.example.uniride.domain.model.Vehicle
+import com.example.uniride.domain.model.Car
 
 class VehicleAdapter(
-    private val onItemClick: (Vehicle) -> Unit = {},
-    private val onTakePhotoClick: (Vehicle) -> Unit = {}
-) : ListAdapter<Vehicle, VehicleAdapter.VehicleViewHolder>(VehicleDiffCallback()) {
+    private val onItemClick: (Car) -> Unit,
+    private val onTakePhotoClick: (Car) -> Unit,
+    private val onDeleteClick: ((Car) -> Unit)? = null
+) : ListAdapter<Car, VehicleAdapter.VehicleViewHolder>(VehicleDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VehicleViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -25,55 +25,70 @@ class VehicleAdapter(
     }
 
     override fun onBindViewHolder(holder: VehicleViewHolder, position: Int) {
-        val vehicle = getItem(position)
-        holder.bind(vehicle, onItemClick, onTakePhotoClick)
+        val car = getItem(position)
+        holder.bind(car)
     }
 
-    class VehicleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class VehicleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvBrandModel: TextView = itemView.findViewById(R.id.tv_brand_model)
         private val tvYear: TextView = itemView.findViewById(R.id.tv_year)
         private val tvColor: TextView = itemView.findViewById(R.id.tv_color)
         private val tvLicensePlate: TextView = itemView.findViewById(R.id.tv_license_plate)
-        private val ivVehicleImage: ImageView = itemView.findViewById(R.id.iv_vehicle_image)
-        private val btnAddPhoto: ImageButton = itemView.findViewById(R.id.btn_add_photo)
-        private val btnEdit: ImageButton = itemView.findViewById(R.id.btn_edit)
+        private val ivVehicle: ImageView = itemView.findViewById(R.id.iv_vehicle_image)
+        private val btnAddPhoto: View = itemView.findViewById(R.id.btn_add_photo)
+        private val btnEdit: View = itemView.findViewById(R.id.btn_edit)
 
-        fun bind(
-            vehicle: Vehicle,
-            onItemClick: (Vehicle) -> Unit,
-            onTakePhotoClick: (Vehicle) -> Unit
-        ) {
-            tvBrandModel.text = "${vehicle.brand} ${vehicle.model}"
-            tvYear.text = vehicle.year.toString()
-            tvColor.text = vehicle.color
-            tvLicensePlate.text = vehicle.licensePlate
+        fun bind(car: Car) {
+            // Combinar marca y modelo en un solo TextView
+            tvBrandModel.text = "${car.brand} ${car.model}"
+            tvYear.text = car.year.toString()
+            tvColor.text = car.color
+            tvLicensePlate.text = car.licensePlate
 
             // Cargar imagen si existe
-            if (vehicle.imageUrls.isNotEmpty()) {
-                try {
-                    val uri = Uri.parse(vehicle.imageUrls[0])
-                    ivVehicleImage.setImageURI(uri)
-                    ivVehicleImage.visibility = View.VISIBLE
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    ivVehicleImage.visibility = View.GONE
-                }
+            if (car.images.isNotEmpty()) {
+                Glide.with(itemView.context)
+                    .load(car.images[0])
+                    .placeholder(R.drawable.ic_vehicle_placeholder)
+                    .error(R.drawable.ic_vehicle_placeholder)
+                    .into(ivVehicle)
             } else {
-                ivVehicleImage.visibility = View.GONE
+                // Usar un drawable por defecto o ocultar la imagen
+                try {
+                    ivVehicle.setImageResource(R.drawable.ic_vehicle_placeholder)
+                } catch (e: Exception) {
+                    // Si no existe el drawable, usar un color de fondo
+                    ivVehicle.setBackgroundColor(android.graphics.Color.LTGRAY)
+                }
             }
 
-            itemView.setOnClickListener { onItemClick(vehicle) }
-            btnEdit.setOnClickListener { onItemClick(vehicle) }
-            btnAddPhoto.setOnClickListener { onTakePhotoClick(vehicle) }
+            // Click listeners
+            itemView.setOnClickListener {
+                onItemClick(car)
+            }
+
+            btnAddPhoto.setOnClickListener {
+                onTakePhotoClick(car)
+            }
+
+            btnEdit.setOnClickListener {
+                onItemClick(car)
+            }
+
+            // Si hay callback de eliminación, usar click largo en el item
+            itemView.setOnLongClickListener {
+                onDeleteClick?.invoke(car)
+                true
+            }
         }
     }
 
-    class VehicleDiffCallback : DiffUtil.ItemCallback<Vehicle>() {
-        override fun areItemsTheSame(oldItem: Vehicle, newItem: Vehicle): Boolean {
-            return oldItem.licensePlate == newItem.licensePlate
+    class VehicleDiffCallback : DiffUtil.ItemCallback<Car>() {
+        override fun areItemsTheSame(oldItem: Car, newItem: Car): Boolean {
+            return oldItem.id == newItem.id
         }
 
-        override fun areContentsTheSame(oldItem: Vehicle, newItem: Vehicle): Boolean {
+        override fun areContentsTheSame(oldItem: Car, newItem: Car): Boolean {
             return oldItem == newItem
         }
     }

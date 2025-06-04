@@ -1,7 +1,9 @@
 package com.example.uniride.domain.model
 
+import com.example.uniride.domain.model.front.TripInformation
+
 data class DriverTripItem(
-    val travelOption: TravelOption,
+    val tripInformation: TripInformation,
     val acceptedCount: Int,
     val pendingCount: Int,
     val isFull: Boolean,

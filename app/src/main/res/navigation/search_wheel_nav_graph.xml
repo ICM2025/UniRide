@@ -22,7 +22,27 @@
         tools:layout="@layout/fragment_search_results">
         <action
             android:id="@+id/action_searchResultsFragment_to_travelDetailFragment" />
+        <action
+            android:id="@+id/action_searchResultsFragment_to_chatFragment"
+            app:destination="@id/chatFragment" />
+
     </fragment>
+
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.example.uniride.chats.ChatFragment"
+        android:label="Chat"
+        tools:layout="@layout/fragment_chat">
+
+        <argument
+            android:name="receiverId"
+            app:argType="string" />
+
+        <argument
+            android:name="receiverName"
+            app:argType="string" />
+    </fragment>
+
 
 
 </navigation>

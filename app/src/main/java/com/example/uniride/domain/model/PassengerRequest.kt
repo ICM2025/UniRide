@@ -1,13 +1,12 @@
 package com.example.uniride.domain.model
 
 data class PassengerRequest(
-    val passengerName: String,
-    val destination: String,
-    val status: PassengerRequestStatus,
-    val profileImg: Int,
-    val university: String,
-    val email: String,
-    val tripCount: Int,
-    val rating: Double,
-    val reviewsCount: Int
+    val id: String = "",
+    // FK a Trip
+    val idTrip: String = "",
+    // FK a User
+    val idUser: String = "",
+    val status: RequestStatus = RequestStatus.PENDING,
+    val attemptCount: Int = 1, // NUEVO: Contador de intentos
+    val createdAt: Long = System.currentTimeMillis()
 )

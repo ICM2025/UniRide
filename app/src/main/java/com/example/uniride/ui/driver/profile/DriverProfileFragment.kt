@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -21,8 +22,20 @@ import androidx.core.content.FileProvider
 import androidx.navigation.fragment.findNavController
 import com.example.uniride.R
 import com.example.uniride.databinding.FragmentDriverProfileBinding
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 class DriverProfileFragment : Fragment() {
 
@@ -32,8 +45,16 @@ class DriverProfileFragment : Fragment() {
     private var currentName = ""
     private var currentEmail = ""
     private var currentPhone = ""
+    private var currentUniversity = ""
+    private var currentVehicleInfo = ""
     private var currentProfilePicUri: Uri? = null
     private lateinit var uriCamera: Uri
+
+    private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
 
     // Launcher para seleccionar imágenes de la galería
     private val getContentGallery =
@@ -97,8 +118,10 @@ class DriverProfileFragment : Fragment() {
             file
         )
 
+        loadFirebaseData()
         loadProfileData()
         updateProfileUI()
+        loadDriverStats()
 
         binding.btnBack.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -152,26 +175,193 @@ class DriverProfileFragment : Fragment() {
         }
     }
 
+    private fun loadFirebaseData() {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            val userId = currentUser.uid
+
+            firestore.collection("users").document(userId)
+                .get()
+                .addOnSuccessListener { document ->
+                    if (!isAdded || _binding == null) return@addOnSuccessListener
+
+                    if (document.exists()) {
+                        currentEmail = document.getString("email") ?: ""
+                        currentName = document.getString("username") ?: ""
+
+                        // NUEVO: Cargar imagen de perfil desde Firebase
+                        val profileImageUrl = document.getString("imgProfile")
+                        if (!profileImageUrl.isNullOrEmpty()) {
+                            loadImageFromUrl(profileImageUrl)
+                        }
+
+                        if (currentEmail.isNotEmpty()) {
+                            fetchUniversityFromEmail(currentEmail)
+                        }
+
+                        loadVehicleInfo(userId)
+                        updateProfileUI()
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    if (isAdded) {
+                        Toast.makeText(requireContext(), "Error al cargar datos del usuario", Toast.LENGTH_SHORT).show()
+                    }
+                }
+        }
+    }
+
+    private fun loadImageFromUrl(imageUrl: String) {
+        // Usando corrutinas para cargar imagen desde URL
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val url = URL(imageUrl)
+                    val connection = url.openConnection()
+                    connection.doInput = true
+                    connection.connect()
+                    val inputStream = connection.getInputStream()
+                    BitmapFactory.decodeStream(inputStream)
+                }?.let { bitmap ->
+                    if (isAdded && _binding != null) {
+                        binding.ivProfile?.setImageBitmap(bitmap)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun loadVehicleInfo(userId: String) {
+        firestore.collection("Cars")
+            .whereEqualTo("idDriver", userId)
+            .get()
+            .addOnSuccessListener { documents ->
+                // Verificar que el fragment aún está activo
+                if (!isAdded || _binding == null) return@addOnSuccessListener
+
+                if (!documents.isEmpty) {
+                    val vehicle = documents.documents[0]
+                    val brand = vehicle.getString("brand") ?: ""
+                    val model = vehicle.getString("model") ?: ""
+                    currentVehicleInfo = "$brand $model".trim()
+                    updateProfileUI()
+                }
+            }
+            .addOnFailureListener { exception ->
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "Error al cargar información del vehículo", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
+    private fun fetchUniversityFromEmail(email: String) {
+        scope.launch {
+            try {
+                val domain = email.substringAfter("@")
+                val university = getUniversityByDomain(domain)
+
+                // Verificar que el fragment aún está activo antes de actualizar
+                if (isAdded && _binding != null) {
+                    currentUniversity = university
+                    updateProfileUI()
+                }
+            } catch (e: Exception) {
+                if (isAdded && _binding != null) {
+                    currentUniversity = "Universidad no encontrada"
+                    updateProfileUI()
+                }
+            }
+        }
+    }
+
+    private suspend fun getUniversityByDomain(domain: String): String = withContext(Dispatchers.IO) {
+        try {
+            val url = URL("https://raw.githubusercontent.com/Hipo/university-domains-list/master/world_universities_and_domains.json")
+            val connection = url.openConnection() as HttpsURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+
+            val response = connection.inputStream.bufferedReader().use { it.readText() }
+            val jsonArray = JSONArray(response)
+
+            for (i in 0 until jsonArray.length()) {
+                val university = jsonArray.getJSONObject(i)
+                val alphaCode = university.optString("alpha_two_code", "")
+
+                if (alphaCode == "CO") {
+                    val domains = university.getJSONArray("domains")
+                    for (j in 0 until domains.length()) {
+                        if (domains.getString(j).equals(domain, ignoreCase = true)) {
+                            return@withContext university.getString("name")
+                        }
+                    }
+                }
+            }
+
+            return@withContext "Universidad no encontrada"
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext "Error al obtener universidad"
+        }
+    }
+
     private fun saveImageToLocal(uri: Uri) {
         try {
-            // Crear un archivo local para guardar la imagen
             val photoFile = File(requireContext().filesDir, "profile_pic_${System.currentTimeMillis()}.jpg")
 
-            // Copiar la imagen seleccionada al archivo local
             requireContext().contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(photoFile).use { output ->
                     input.copyTo(output)
                 }
             }
 
-            // Actualizar la URI de la imagen de perfil
             currentProfilePicUri = Uri.fromFile(photoFile)
+
+            uploadProfileImageToFirebase(uri)
 
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(requireContext(), "Error al guardar la imagen", Toast.LENGTH_SHORT).show()
         }
     }
+
+    private fun uploadProfileImageToFirebase(uri: Uri) {
+        val currentUser = auth.currentUser ?: return
+        val fileName = "profile_${System.currentTimeMillis()}.jpg"
+        val storageRef = storage.reference.child("profile_images/${currentUser.uid}/$fileName")
+
+        storageRef.putFile(uri)
+            .continueWithTask { task ->
+                if (!task.isSuccessful) {
+                    throw task.exception ?: Exception("Upload failed")
+                }
+                storageRef.downloadUrl
+            }
+            .addOnSuccessListener { downloadUrl ->
+                // Guardar URL en Firestore
+                saveProfileImageUrlToFirestore(downloadUrl.toString())
+            }
+            .addOnFailureListener { exception ->
+                Toast.makeText(requireContext(), "Error al subir imagen: ${exception.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun saveProfileImageUrlToFirestore(imageUrl: String) {
+        val currentUser = auth.currentUser ?: return
+
+        firestore.collection("users").document(currentUser.uid)
+            .update("imgProfile", imageUrl)
+            .addOnSuccessListener {
+                Toast.makeText(requireContext(), "Foto de perfil actualizada", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { exception ->
+                Toast.makeText(requireContext(), "Error al actualizar foto: ${exception.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
     private fun launchEditProfileActivity() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.activity_edit_profile, null)
 
@@ -224,52 +414,71 @@ class DriverProfileFragment : Fragment() {
 
         // Configurar el botón de guardar
         btnSave.setOnClickListener {
-            // Validar los campos
             val name = etName.text.toString().trim()
             val email = etEmail.text.toString().trim()
             val phone = etPhone.text.toString().trim()
 
-            // Validación simple
             if (name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
                 Toast.makeText(requireContext(), "Todos los campos son obligatorios", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // Validar formato de email
             if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                 Toast.makeText(requireContext(), "El formato del email no es válido", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // Actualizar los datos
-            currentName = name
-            currentEmail = email
-            currentPhone = phone
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                // MODIFICADO: Agregar teléfono a las actualizaciones
+                val updates = hashMapOf<String, Any>(
+                    "username" to name,
+                    "email" to email,
+                    "phone" to phone  // NUEVO CAMPO
+                )
 
-            // Actualizar UI y guardar datos
-            updateProfileUI()
-            saveProfileData()
+                firestore.collection("users").document(currentUser.uid)
+                    .update(updates)
+                    .addOnSuccessListener {
+                        currentName = name
+                        currentEmail = email
+                        currentPhone = phone
 
-            // Mostrar mensaje de éxito y cerrar el diálogo
-            Toast.makeText(requireContext(), "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
-            dialog.dismiss()
+                        if (email != currentEmail) {
+                            fetchUniversityFromEmail(email)
+                        }
+
+                        updateProfileUI()
+                        saveProfileData()
+                        Toast.makeText(requireContext(), "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
+                        dialog.dismiss()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(requireContext(), "Error al actualizar el perfil", Toast.LENGTH_SHORT).show()
+                    }
+            }
         }
 
-        // Configurar los botones de cancelar y volver
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnBack.setOnClickListener { dialog.dismiss() }
 
-        // Mostrar el diálogo
         dialog.show()
     }
 
     private fun loadProfileData() {
         val sharedPrefs = requireActivity().getSharedPreferences("user_profile", Activity.MODE_PRIVATE)
-        currentName = sharedPrefs.getString("NAME", "") ?: ""
-        currentEmail = sharedPrefs.getString("EMAIL", "") ?: ""
-        currentPhone = sharedPrefs.getString("PHONE", "") ?: ""
 
-        // Load profile picture if exists
+        // Solo cargar datos locales si no hay datos de Firebase
+        if (currentName.isEmpty()) {
+            currentName = sharedPrefs.getString("NAME", "") ?: ""
+        }
+        if (currentEmail.isEmpty()) {
+            currentEmail = sharedPrefs.getString("EMAIL", "") ?: ""
+        }
+        if (currentPhone.isEmpty()) {
+            currentPhone = sharedPrefs.getString("PHONE", "") ?: ""
+        }
+
         val profilePicPath = sharedPrefs.getString("PROFILE_PIC_PATH", null)
         if (profilePicPath != null) {
             val file = File(profilePicPath)
@@ -280,17 +489,34 @@ class DriverProfileFragment : Fragment() {
     }
 
     private fun updateProfileUI() {
-        binding.tvName?.text = currentName
+        // Verificar que el binding aún existe antes de actualizar la UI
+        if (_binding == null) return
 
-        currentProfilePicUri?.let { uri ->
-            try {
-                requireContext().contentResolver.openInputStream(uri)?.use { inputStream ->
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-                    binding.ivProfile.setImageBitmap(bitmap)
+        try {
+            // Usar safe calls para todas las vistas
+            binding.tvName?.text = if (currentName.isNotEmpty()) currentName else "Nombre no disponible"
+            binding.tvEmail?.text = if (currentEmail.isNotEmpty()) currentEmail else "Email no disponible"
+            binding.tvUniversity?.text = if (currentUniversity.isNotEmpty()) currentUniversity else "Cargando universidad..."
+
+            // Solo actualizar vehicle info si la vista existe
+            binding.tvVehicleInfo?.text = if (currentVehicleInfo.isNotEmpty()) currentVehicleInfo else "Vehículo no disponible"
+
+            // Cargar imagen de perfil de forma segura
+            currentProfilePicUri?.let { uri ->
+                try {
+                    requireContext().contentResolver.openInputStream(uri)?.use { inputStream ->
+                        val bitmap = BitmapFactory.decodeStream(inputStream)
+                        binding.ivProfile?.setImageBitmap(bitmap)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // No mostrar toast aquí para evitar spam de errores
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Log del error para debugging
+            android.util.Log.e("DriverProfile", "Error updating UI: ${e.message}")
         }
     }
 
@@ -300,12 +526,40 @@ class DriverProfileFragment : Fragment() {
             putString("NAME", currentName)
             putString("EMAIL", currentEmail)
             putString("PHONE", currentPhone)
+            putString("UNIVERSITY", currentUniversity)
+            putString("VEHICLE_INFO", currentVehicleInfo)
             currentProfilePicUri?.let { uri ->
                 putString("PROFILE_PIC_PATH", uri.path)
             }
             apply()
         }
     }
+
+    private fun loadDriverStats() {
+
+        val currentUser = auth.currentUser ?: return
+        firestore.collection("DriverStats").document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { doc ->
+                val binding = _binding ?: return@addOnSuccessListener
+
+                if (doc != null && doc.exists()) {
+                    val tripsPublished = doc.getLong("tripsPublished") ?: 0
+                    val rating = doc.getDouble("rating") ?: 0.0
+                    val passengers = doc.getLong("passengersTransported") ?: 0
+
+                    binding.tvTrips.text = tripsPublished.toString()
+                    val ratingText = "${String.format("%.1f", rating)} ★"
+                    binding.tvRating.text = ratingText
+                    binding.tvPassengers.text = passengers.toString()
+                }
+
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al cargar estadísticas", Toast.LENGTH_SHORT).show()
+            }
+    }
+
 
     override fun onPause() {
         super.onPause()
@@ -314,6 +568,7 @@ class DriverProfileFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        scope.cancel()
         _binding = null
     }
 }

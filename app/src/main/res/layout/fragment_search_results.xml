@@ -119,6 +119,13 @@
                         android:clipToPadding="false"
                         android:paddingBottom="8dp"
                         android:nestedScrollingEnabled="true" />
+
+                <include
+                    android:id="@+id/layout_travel_detail"
+                    layout="@layout/bottom_sheet_travel_detail"
+                    android:visibility="gone" />
+
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </FrameLayout>
